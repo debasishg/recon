@@ -10,37 +10,44 @@ import java.util.concurrent.Executors
 import scalaz._
 import Scalaz._
 
-object ReconEngine {
-  type ReconId = String
+trait ReconEngine {
+  type ReconId 
 
   implicit val timer = new JavaTimer
 
   // set up Executors
   val futures = FuturePool(Executors.newFixedThreadPool(8))
 
-  def loadOneReconSet[T, K, V](id: ReconId, values: Seq[T])(implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = clients.withClient {client =>
+  def loadOneReconSet[T, K, V](id: ReconId, defn: ReconDef[T])(implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = clients.withClient {client =>
     import client._
-    values.foreach {value => 
+
+    def load(value: T) {
       val gk = p.groupKey(value)
       val mv = p.matchValue(value)
-      hsetnx(id, gk, mv) unless {
-        hset(id, gk, m append (hget[V](id, gk).get, mv)) // get on Option is safe since hsetnx has returned false
+      hsetnx(id, gk, mv) unless { // get on Option is safe since hsetnx has returned false
+        hset(id, gk, m append (hget[V](id, gk).get, mv)) 
       }
     }
+
+    // ugly, but don't want the guard check every time for no-predicate scenario
+    if (!defn.maybePred.isDefined) 
+      defn.values.foreach(load(_)) 
+    else 
+      for(v <- defn.values if defn.maybePred.get(v) == true) load(v)
+
     hlen(id)
   }
 
-  def loadReconInputData[T, K, V](ds: Map[ReconId, Seq[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = {
+  def loadReconInputData[T, K, V](ds: Map[ReconId, ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = {
     val fs =
-      ds.map {case (id, bs) =>
+      ds.map {case (id, rdef) =>
         futures {
-          loadOneReconSet(id, bs)
+          loadOneReconSet(id, rdef)
         }.within(120.seconds) handle {
           case _: TimeoutException => None
         }
       }
-    val all = Future.collect(fs.toSeq)
-    all.apply
+    Future.collect(fs.toSeq) apply
   }
 
   def recon[K, V](ids: Seq[ReconId], fn: List[Option[V]] => Boolean)(implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V]) = {
@@ -54,4 +61,8 @@ object ReconEngine {
       }
     }
   }
+}
+
+object ReconEngine extends ReconEngine {
+  type ReconId = String
 }

@@ -12,7 +12,7 @@ import Scalaz._
 
 import ReconEngine._
 
-object BalanceRecon {
+trait BalanceRecon {
   class RInt(orig: Int) {
     def toUSD(ccy: String) = ccy match {
       case "USD" => orig
@@ -30,10 +30,10 @@ object BalanceRecon {
     def matchValue(b: Balance) = b.amount.toUSD(b.ccy)
   }
 
-  def loadBalance(id: ReconId, balances: Seq[Balance])(implicit clients: RedisClientPool) = 
+  def loadBalance(id: ReconId, balances: CollectionDef[Balance])(implicit clients: RedisClientPool) = 
     loadOneReconSet(id, balances)
 
-  def loadBalances(ds: Map[ReconId, Seq[Balance]])(implicit clients: RedisClientPool) =
+  def loadBalances(ds: Map[ReconId, CollectionDef[Balance]])(implicit clients: RedisClientPool) =
     loadReconInputData(ds)
 
   def getBalance(id: ReconId)(implicit clients: RedisClientPool) = clients.withClient {client =>
@@ -44,3 +44,5 @@ object BalanceRecon {
     fn: List[Option[Int]] => Boolean)(implicit clients: RedisClientPool) = 
     recon[String, Int](ids, fn)
 }
+
+object BalanceRecon extends BalanceRecon

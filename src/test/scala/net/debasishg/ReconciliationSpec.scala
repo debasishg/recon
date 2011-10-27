@@ -38,7 +38,7 @@ class ReconSpec extends Spec
           Balance("a-134", now, "AUD", 2000),
           Balance("a-134", now, "GBP", 2500),
           Balance("a-123", now, "JPY", 250000))
-      loadBalance("r1", balances)
+      loadBalance("r1", CollectionDef(balances))
       println(getBalance("r11"))
     }
   }
@@ -60,7 +60,7 @@ class ReconSpec extends Spec
           Balance("a-124", now, "USD", 26000), 
           Balance("a-134", now, "AUD", 3250))
 
-      println(loadBalances(Map("r21" -> bs1, "r22" -> bs2)))
+      println(loadBalances(Map("r21" -> CollectionDef(bs1), "r22" -> CollectionDef(bs2))))
 
       def matchFn(maybeVals: List[Option[Int]]) = {
         maybeVals.flatten.size match {
@@ -98,7 +98,7 @@ class ReconSpec extends Spec
           Balance("a-4", now, "USD", 2000), 
           Balance("a-3", now, "USD", 500))
 
-      println(loadBalances(Map("r31" -> bs1, "r32" -> bs2, "r33" -> bs3)))
+      println(loadBalances(Map("r31" -> CollectionDef(bs1), "r32" -> CollectionDef(bs2), "r33" -> CollectionDef(bs3))))
 
       def matchFn(maybeVals: List[Option[Int]]) = {
         val flist = maybeVals.flatten
