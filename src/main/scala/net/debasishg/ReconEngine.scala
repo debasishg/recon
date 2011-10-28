@@ -10,7 +10,7 @@ import java.util.concurrent.Executors
 import scalaz._
 import Scalaz._
 
-trait ReconEngine {
+trait ReconEngine { 
   type ReconId 
 
   implicit val timer = new JavaTimer
@@ -18,12 +18,14 @@ trait ReconEngine {
   // set up Executors
   val futures = FuturePool(Executors.newFixedThreadPool(8))
 
-  def loadOneReconSet[T, K, V](id: ReconId, defn: ReconDef[T])(implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = clients.withClient {client =>
+  def loadOneReconSet[T, K, V](defn: ReconDef[ReconId, T])(implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = clients.withClient {client =>
     import client._
 
     def load(value: T) {
       val gk = p.groupKey(value)
       val mv = p.matchValue(value)
+      val id = defn.id
+
       hsetnx(id, gk, mv) unless { // get on Option is safe since hsetnx has returned false
         hset(id, gk, m append (hget[V](id, gk).get, mv)) 
       }
@@ -38,11 +40,11 @@ trait ReconEngine {
     hlen(id)
   }
 
-  def loadReconInputData[T, K, V](ds: Map[ReconId, ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = {
+  def loadReconInputData[T, K, V](ds: Seq[ReconDef[ReconId, T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]): Seq[Option[Int]] = {
     val fs =
-      ds.map {case (id, rdef) =>
+      ds.map {d =>
         futures {
-          loadOneReconSet(id, rdef)
+          loadOneReconSet(d)
         }.within(120.seconds) handle {
           case _: TimeoutException => None
         }
@@ -61,8 +63,4 @@ trait ReconEngine {
       }
     }
   }
-}
-
-object ReconEngine extends ReconEngine {
-  type ReconId = String
 }

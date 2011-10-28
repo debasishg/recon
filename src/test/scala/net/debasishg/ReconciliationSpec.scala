@@ -38,7 +38,7 @@ class ReconSpec extends Spec
           Balance("a-134", now, "AUD", 2000),
           Balance("a-134", now, "GBP", 2500),
           Balance("a-123", now, "JPY", 250000))
-      loadBalance("r1", CollectionDef(balances))
+      loadBalance(CollectionDef("r1", balances))
       println(getBalance("r11"))
     }
   }
@@ -60,7 +60,8 @@ class ReconSpec extends Spec
           Balance("a-124", now, "USD", 26000), 
           Balance("a-134", now, "AUD", 3250))
 
-      println(loadBalances(Map("r21" -> CollectionDef(bs1), "r22" -> CollectionDef(bs2))))
+      val l = loadBalances(Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2)))
+      l.size should equal(2)
 
       def matchFn(maybeVals: List[Option[Int]]) = {
         maybeVals.flatten.size match {
@@ -68,9 +69,7 @@ class ReconSpec extends Spec
           case _ => false
         }
       }
-      try {
-        reconBalance(List("r21", "r22"), matchFn).foreach(println)
-      } catch { case ex: Exception => ex.printStackTrace }
+      reconBalance(List("r21", "r22"), matchFn).foreach(println)
     }
   }
 
@@ -98,7 +97,8 @@ class ReconSpec extends Spec
           Balance("a-4", now, "USD", 2000), 
           Balance("a-3", now, "USD", 500))
 
-      println(loadBalances(Map("r31" -> CollectionDef(bs1), "r32" -> CollectionDef(bs2), "r33" -> CollectionDef(bs3))))
+      val l = loadBalances(Seq(CollectionDef("r31", bs1), CollectionDef("r32", bs2), CollectionDef("r33", bs3)))
+      l.size should equal(3)
 
       def matchFn(maybeVals: List[Option[Int]]) = {
         val flist = maybeVals.flatten
@@ -111,6 +111,39 @@ class ReconSpec extends Spec
         }
       }
       reconBalance(List("r31", "r32", "r33"), matchFn).foreach(println)
+    }
+  }
+
+  describe("run recon with a 1:1 balance matching data set and predicate") {
+    it("should generate report") {
+      val now = DateTime.now.toLocalDate
+      val bs1 = 
+        List(
+          Balance("a-123", now, "USD", 1000), 
+          Balance("a-134", now, "AUD", 2000),
+          Balance("a-134", now, "GBP", 2500),
+          Balance("a-136", now, "GBP", 2500),
+          Balance("a-123", now, "USD", 50),
+          Balance("a-123", now, "JPY", 250000))
+
+      val bs2 = 
+        List(
+          Balance("a-123", now, "USD", 126000), 
+          Balance("a-124", now, "USD", 26000), 
+          Balance("a-134", now, "USD", 50), 
+          Balance("a-134", now, "AUD", 3250))
+
+      val gr100 = (b: Balance) => b.amount > 100
+      val l = loadBalances(Seq(CollectionDef("r21", bs1, Some(gr100)), CollectionDef("r22", bs2, Some(gr100))))
+      l.size should equal(2)
+
+      def matchFn(maybeVals: List[Option[Int]]) = {
+        maybeVals.flatten.size match {
+          case l if l == maybeVals.size => maybeVals.head == maybeVals.tail.head
+          case _ => false
+        }
+      }
+      reconBalance(List("r21", "r22"), matchFn).foreach(println)
     }
   }
 }

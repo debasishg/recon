@@ -10,9 +10,10 @@ import java.util.concurrent.Executors
 import scalaz._
 import Scalaz._
 
-import ReconEngine._
-
 trait BalanceRecon {
+  lazy val engine = new ReconEngine { type ReconId = String }
+  import engine._
+
   class RInt(orig: Int) {
     def toUSD(ccy: String) = ccy match {
       case "USD" => orig
@@ -30,10 +31,10 @@ trait BalanceRecon {
     def matchValue(b: Balance) = b.amount.toUSD(b.ccy)
   }
 
-  def loadBalance(id: ReconId, balances: CollectionDef[Balance])(implicit clients: RedisClientPool) = 
-    loadOneReconSet(id, balances)
+  def loadBalance(balances: CollectionDef[String, Balance])(implicit clients: RedisClientPool) = 
+    loadOneReconSet(balances)
 
-  def loadBalances(ds: Map[ReconId, CollectionDef[Balance]])(implicit clients: RedisClientPool) =
+  def loadBalances(ds: Seq[CollectionDef[String, Balance]])(implicit clients: RedisClientPool) =
     loadReconInputData(ds)
 
   def getBalance(id: ReconId)(implicit clients: RedisClientPool) = clients.withClient {client =>
