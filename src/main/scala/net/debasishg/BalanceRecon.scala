@@ -10,6 +10,7 @@ import java.util.concurrent.Executors
 import scalaz._
 import Scalaz._
 
+case class Balance(accountNo: String, date: org.joda.time.LocalDate, ccy: String, amount: Int)
 trait BalanceRecon {
   lazy val engine = new ReconEngine { type ReconId = String }
   import engine._
@@ -22,8 +23,6 @@ trait BalanceRecon {
   }
   implicit def enrichInt(i: Int) = new RInt(i)
   import Parse.Implicits.parseInt
-
-  case class Balance(accountNo: String, date: org.joda.time.LocalDate, ccy: String, amount: Int)
 
   // typeclass instance for Balance
   implicit object BalanceProtocol extends ReconProtocol[Balance, String, Int] {

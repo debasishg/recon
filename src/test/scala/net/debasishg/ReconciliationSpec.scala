@@ -146,5 +146,31 @@ class ReconSpec extends Spec
       reconBalance(List("r21", "r22"), matchFn).foreach(println)
     }
   }
+
+  describe("generate data") {
+    it("should generate data") {
+      import ReconDataGenerator._
+      val (m, s1, s2) = generateDataForMultipleAccounts
+      val start = System.currentTimeMillis
+      val l = loadBalances(Seq(CollectionDef("r41", m), CollectionDef("r42", s1), CollectionDef("r43", s2)))
+      val afterLoad = System.currentTimeMillis
+      println("load time = " + (afterLoad - start))
+      l.size should equal(3)
+
+      def matchFn(maybeVals: List[Option[Int]]) = {
+        val flist = maybeVals.flatten
+        flist.size match {
+          case l if l == maybeVals.size => flist match {
+            case (a :: b :: c :: Nil) => a == (b + c)
+            case _ => false
+          }
+          case _ => false
+        }
+      }
+      reconBalance(List("r41", "r42", "r43"), matchFn) // .foreach(println)
+      val end = System.currentTimeMillis
+      println("recon time = " + (end - afterLoad))
+    }
+  }
 }
 
