@@ -12,5 +12,5 @@ abstract class ReconProtocol[T, K, V: Monoid] {
   def groupKey(t: T): K
 
   // these need to be matched as part of recon process
-  def matchValue(t: T): V
+  def matchValues(t: T): Map[String, V]
 }

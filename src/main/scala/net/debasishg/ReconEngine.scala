@@ -18,16 +18,39 @@ trait ReconEngine {
   // set up Executors
   val futures = FuturePool(Executors.newFixedThreadPool(8))
 
-  def loadOneReconSet[T, K, V](defn: ReconDef[ReconId, T])(implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]) = clients.withClient {client =>
+  def loadOneReconSet[T, K, V](defn: ReconDef[ReconId, T])(implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V], mv: Manifest[V]) = clients.withClient {client =>
     import client._
 
+    /**
+     * Using 2 levels of hash. The first level stores the recon id as the key, the group key as the
+     * field and key for the second level hash as the value. e.g.
+     *
+     *   +-----------------------------+           +---------------------------------------+
+     *   | r1 | account120111212 |  x--|---------> | r1:account120111212 | quantity | 200  |
+     *   +------------+----------------+           +---------------------+----------+------+
+     *                |                                                 | amount    | 2000 |
+     *                |                                                 +-----------+------+
+     *        +-------+----------------+           +---------------------------------------+
+     *        | account220111212 |  x--|---------> | r1:account220111212 | quantity | 100  |
+     *        +------------------------+           +---------------------+----------+------+
+     *                                                                  | amount    | 2500 |
+     *                                                                  +-----------+------+
+     *
+     */                                                                  
     def load(value: T) {
       val gk = p.groupKey(value)
-      val mv = p.matchValue(value)
+      val mvs = p.matchValues(value)
       val id = defn.id
 
-      hsetnx(id, gk, mv) unless { // get on Option is safe since hsetnx has returned false
-        hset(id, gk, m append (hget[V](id, gk).get, mv)) 
+      // group key + id = key to the second level hash
+      val mapId = gk + ":" + id.toString
+
+      // level 1 hash population
+      hsetnx(id, gk, mapId)
+      mvs.map {case (k, v) => 
+        hsetnx(mapId, k, v) unless { // level 2 hash population
+          hset(mapId, k, m append (hget[V](mapId, k).get, v)) 
+        }
       }
     }
 
@@ -40,7 +63,7 @@ trait ReconEngine {
     hlen(id)
   }
 
-  def loadReconInputData[T, K, V](ds: Seq[ReconDef[ReconId, T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V]): Seq[Option[Int]] = {
+  def loadReconInputData[T, K, V](ds: Seq[ReconDef[ReconId, T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V], mv: Manifest[V]): Seq[Option[Int]] = {
     val fs =
       ds.map {d =>
         futures {
@@ -52,15 +75,24 @@ trait ReconEngine {
     Future.collect(fs.toSeq) apply
   }
 
-  def recon[K, V](ids: Seq[ReconId], fn: List[Option[V]] => Boolean)(implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V]) = {
+  def recon[K, V](ids: Seq[ReconId], matchFn: List[Option[List[V]]] => Boolean)(implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V]) = {
+
     val fields = clients.withClient {client =>
       ids.map(client.hkeys[K](_)).view.flatten.flatten.toSet 
     }
 
     fields.par.map {field => 
       clients.withClient {client =>
-        (field, fn(ids.map {id => client.hget[V](id, field)}.toList))
+        val maps: Seq[Option[List[V]]] = ids.map {id =>
+          val hk = client.hget[String](id, field)
+          hk match {
+            case Some(s) => client.hgetall[String, V](s).map(_.values).map(_.toList)
+            case None => none[List[V]]
+          }
+        }
+        (field, matchFn(maps.toList))
       }
     }
   }
 }
+

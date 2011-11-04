@@ -27,7 +27,7 @@ trait BalanceRecon {
   // typeclass instance for Balance
   implicit object BalanceProtocol extends ReconProtocol[Balance, String, Int] {
     def groupKey(b: Balance) = b.accountNo + b.date.toString
-    def matchValue(b: Balance) = b.amount.toUSD(b.ccy)
+    def matchValues(b: Balance) = Map("amount" -> b.amount.toUSD(b.ccy))
   }
 
   def loadBalance(balances: CollectionDef[String, Balance])(implicit clients: RedisClientPool) = 
@@ -41,7 +41,7 @@ trait BalanceRecon {
   }
 
   def reconBalance(ids: Seq[ReconId], 
-    fn: List[Option[Int]] => Boolean)(implicit clients: RedisClientPool) = 
+    fn: List[Option[List[Int]]] => Boolean)(implicit clients: RedisClientPool) = 
     recon[String, Int](ids, fn)
 }
 
