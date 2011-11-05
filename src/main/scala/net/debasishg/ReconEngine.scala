@@ -83,10 +83,11 @@ trait ReconEngine {
 
     fields.par.map {field => 
       clients.withClient {client =>
+        import client._
         val maps: Seq[Option[List[V]]] = ids.map {id =>
-          val hk = client.hget[String](id, field)
+          val hk = hget[String](id, field)
           hk match {
-            case Some(s) => client.hgetall[String, V](s).map(_.values).map(_.toList)
+            case Some(s) => hgetall[String, V](s).map(_.values).map(_.toList)
             case None => none[List[V]]
           }
         }
