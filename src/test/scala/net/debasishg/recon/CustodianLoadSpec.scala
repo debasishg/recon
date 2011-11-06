@@ -1,14 +1,13 @@
-package recon
+package net.debasishg.recon
 
 import scala.collection.parallel.ParSet
 import org.scalatest.{Spec, BeforeAndAfterEach, BeforeAndAfterAll}
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
-import org.scala_tools.time.Imports._
 
 @RunWith(classOf[JUnitRunner])
-class CustodianReconSpec extends Spec 
+class CustodianLoadSpec extends Spec 
                          with ShouldMatchers
                          with BeforeAndAfterEach
                          with BeforeAndAfterAll {

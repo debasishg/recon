@@ -1,4 +1,4 @@
-package recon
+package net.debasishg.recon
 
 import com.twitter._
 import util.{Future, FuturePool, Return, TimeoutException, Timer, JavaTimer}

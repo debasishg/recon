@@ -1,4 +1,4 @@
-package recon
+package net.debasishg.recon
 
 import scalaz._
 import Scalaz._
@@ -29,9 +29,9 @@ trait FixedLengthFieldXtractor extends Xtractor {
   val maps: Map[String, (Int, Int)]
 
   // extract "field" from string "s" after looking up field position in "maps"
-  def xtract(field: String, s: String) = maps.get(field).map(p => s.substring(p._1, p._1 + p._2))
+  def xtract(field: String, s: String) = maps.get(field).map(p => s.substring(p._1, p._1 + p._2).trim)
 
   // extract "field" from string "s" after looking up field position in "maps" and apply "f" 
   def xtractAs[T](field: String, s: String)(implicit f: String => T) = 
-    maps.get(field).map(p => f(s.substring(p._1, p._1 + p._2)))
+    maps.get(field).map(p => f(s.substring(p._1, p._1 + p._2).trim))
 }

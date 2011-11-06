@@ -1,4 +1,4 @@
-package recon
+package net.debasishg.recon
 
 import org.scalatest.{Spec, BeforeAndAfterEach, BeforeAndAfterAll}
 import org.scalatest.matchers.ShouldMatchers

@@ -1,4 +1,4 @@
-package recon
+package net.debasishg.recon
 
 import scala.collection.parallel.ParSet
 import org.scalatest.{Spec, BeforeAndAfterEach, BeforeAndAfterAll}
@@ -113,8 +113,7 @@ class ReconSpec extends Spec
       val l = loadBalances(Seq(CollectionDef("r31", bs1), CollectionDef("r32", bs2), CollectionDef("r33", bs3)))
       l.size should equal(3)
 
-      implicit def matchCriterion(is: List[Int]) = is.head == is.tail.head + is.tail.tail.head
-      reconBalance(List("r31", "r32", "r33"), matchAsExpr).forall(_. _2 == true) should equal(true)
+      reconBalance(List("r31", "r32", "r33"), matchHeadAsSumOfRest).forall(_. _2 == true) should equal(true)
     }
   }
 
@@ -154,8 +153,7 @@ class ReconSpec extends Spec
       println("load time = " + (afterLoad - start))
       l.size should equal(3)
 
-      implicit def matchCriterion(is: List[Int]) = is.head == is.tail.head + is.tail.tail.head
-      reconBalance(List("r41", "r42", "r43"), matchAsExpr)
+      reconBalance(List("r41", "r42", "r43"), matchHeadAsSumOfRest)
       val end = System.currentTimeMillis
       println("recon time = " + (end - afterLoad))
     }

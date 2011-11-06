@@ -1,4 +1,4 @@
-package recon
+package net.debasishg.recon
 
 
 trait ReconDef[ReconId, T] {

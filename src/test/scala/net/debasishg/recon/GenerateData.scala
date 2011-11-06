@@ -1,4 +1,4 @@
-package recon
+package net.debasishg.recon
 
 import org.scala_tools.time.Imports._
 object ReconDataGenerator {

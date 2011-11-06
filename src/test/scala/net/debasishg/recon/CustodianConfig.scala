@@ -1,14 +1,15 @@
-package recon
+package net.debasishg.recon
 
 import scalaz._
 import Scalaz._
 
-case class CustodianFetchValue(netAmount: BigDecimal,
-  quantity: BigDecimal,
-  security: String,
-  transactionDate: String,
-  transactionType: String)
-
+/**
+ * @todo
+ * 1. trim space for fixed length records => done
+ * 2. take care of date formatting
+ * 3. uniformity of transaction type => hard coded now
+ * 4. handling scale => hard coded now
+ */
 trait CustodianBConfig extends FixedLengthFieldXtractor {
   val maps = // 0-based start position 
     Map("effectiveValue"       -> (276, 18), 
@@ -20,7 +21,7 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
         "transactionType"      -> (110, 1))
 
   def process(fileName: String) = {
-    implicit val f = (s: String) => BigDecimal(s)
+    implicit val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
     s.map(_.map {str =>
@@ -31,8 +32,8 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
 
       val netAmount = (effectiveValue |@| effectiveValueDc) {(v, c) =>
         c match {
-          case "C" => v
-          case _ => (-1) * v
+          case "C" => v/100
+          case _ => (-1) * (v/100)
         }
       }
 
@@ -43,8 +44,8 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
 
       val quantity = (transactionType |@| longQuantity |@| shortQuantity) {(t, l, s) =>
         t match {
-          case "B" => l
-          case _ => (-1) * s
+          case "B" => (l/100)
+          case _ => (-1) * (s/100)
         }
       }
 
@@ -68,7 +69,7 @@ trait CustodianAConfig extends CSVFieldXtractor {
         "transactionType"    -> 8)
 
   def process(fileName: String) = {
-    implicit val f = (s: String) => BigDecimal(s)
+    implicit val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
     s.map(_.map {str =>
@@ -95,7 +96,7 @@ trait CustodianCConfig extends CSVFieldXtractor {
         "transactionType"    -> 1)
 
   def process(fileName: String) = {
-    implicit val f = (s: String) => BigDecimal(s)
+    implicit val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
     s.map(_.map {str =>

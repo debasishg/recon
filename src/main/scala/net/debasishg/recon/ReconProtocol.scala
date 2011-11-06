@@ -1,4 +1,4 @@
-package recon
+package net.debasishg.recon
 
 import scalaz._
 import Scalaz._
