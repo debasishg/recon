@@ -12,7 +12,11 @@ import Scalaz._
 
 case class Balance(accountNo: String, date: org.joda.time.LocalDate, ccy: String, amount: Int)
 trait BalanceRecon {
-  lazy val engine = new ReconEngine { type ReconId = String }
+  lazy val engine = new ReconEngine { 
+    type ReconId = String 
+    type X = Int
+  }
+
   import engine._
 
   class RInt(orig: Int) {
@@ -40,8 +44,8 @@ trait BalanceRecon {
     client.hgetall[String, Int](id)
   }
 
-  def reconBalance(ids: Seq[ReconId], 
-    fn: List[Option[List[Int]]] => Boolean)(implicit clients: RedisClientPool) = 
+  def reconBalance(ids: Seq[ReconId], fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => Boolean)
+    (implicit clients: RedisClientPool) = 
     recon[String, Int](ids, fn)
 }
 

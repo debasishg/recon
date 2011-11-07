@@ -11,7 +11,11 @@ case class TradeData(accountNo: String,
   tradeDate: org.joda.time.LocalDate, security: String, quantity: Int, amount: Int)
 
 trait TradeDataRecon {
-  lazy val engine = new ReconEngine { type ReconId = String }
+  lazy val engine = new ReconEngine { 
+    type ReconId = String 
+    type X = Int
+  }
+
   import engine._
 
   import Parse.Implicits.parseInt
@@ -29,7 +33,8 @@ trait TradeDataRecon {
     (implicit clients: RedisClientPool) = loadReconInputData(ds)
 
   def reconTradeData(ids: Seq[ReconId], 
-    fn: List[Option[List[Int]]] => Boolean)(implicit clients: RedisClientPool) = 
+    fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => Boolean)
+    (implicit clients: RedisClientPool) = 
     recon[String, Int](ids, fn)
 }
 

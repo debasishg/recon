@@ -16,9 +16,20 @@ trait ReconEngine {
   implicit val timer = new JavaTimer
 
   // set up Executors
-  val futures = FuturePool(Executors.newFixedThreadPool(8))
+  lazy val futures = FuturePool(Executors.newFixedThreadPool(8))
 
-  def loadOneReconSet[T, K, V](defn: ReconDef[ReconId, T])(implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V], mv: Manifest[V]) = clients.withClient {client =>
+  /**
+   * tolerance function for comparing values
+   * Can be overridden in making concrete Recon Engines. The default implementation is based on
+   * equality.
+   * @todo Explore if scalaz.Equal can be used
+   */
+  type X
+  def tolerancefn(x: X, y: X): Boolean = x == y
+
+  def loadOneReconSet[T, K, V](defn: ReconDef[ReconId, T])
+    (implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], 
+     p: ReconProtocol[T, K, V], mv: Manifest[V]) = clients.withClient {client =>
     import client._
 
     /**
@@ -75,7 +86,9 @@ trait ReconEngine {
     Future.collect(fs.toSeq) apply
   }
 
-  def recon[K, V](ids: Seq[ReconId], matchFn: List[Option[List[V]]] => Boolean)(implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V]) = {
+  def recon[K, V <: X](ids: Seq[ReconId], 
+    matchFn: (List[Option[List[V]]], (V, V) => Boolean) => Boolean)
+    (implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V]) = {
 
     val fields = clients.withClient {client =>
       ids.map(client.hkeys[K](_)).view.flatten.flatten.toSet 
@@ -91,7 +104,7 @@ trait ReconEngine {
             case None => none[List[V]]
           }
         }
-        (field, matchFn(maps.toList))
+        (field, matchFn(maps.toList, tolerancefn))
       }
     }
   }
