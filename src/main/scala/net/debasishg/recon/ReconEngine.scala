@@ -25,7 +25,7 @@ trait ReconEngine {
    * @todo Explore if scalaz.Equal can be used
    */
   type X
-  def tolerancefn(x: X, y: X): Boolean = x == y
+  def tolerancefn(x: X, y: X)(implicit ex: Equal[X]): Boolean = x === y
 
   def loadOneReconSet[T, K, V](defn: ReconDef[ReconId, T])
     (implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], 
@@ -88,7 +88,7 @@ trait ReconEngine {
 
   def recon[K, V <: X](ids: Seq[ReconId], 
     matchFn: (List[Option[List[V]]], (V, V) => Boolean) => Boolean)
-    (implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V]) = {
+    (implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V], ex: Equal[X]) = {
 
     val fields = clients.withClient {client =>
       ids.map(client.hkeys[K](_)).view.flatten.flatten.toSet 

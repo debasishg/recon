@@ -20,6 +20,9 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
         "transactionDate"      -> (295, 8), 
         "transactionType"      -> (110, 1))
 
+  import Numeric.Implicits._
+  def scale[T: Numeric](me: T, by: Int): Double = me.toDouble / math.pow(10, by)
+
   def process(fileName: String) = {
     implicit val f = (s: String) => s.toDouble
 
@@ -32,10 +35,10 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
 
       val netAmount = (effectiveValue |@| effectiveValueDc) {(v, c) =>
         c match {
-          case "C" => v/100
-          case _ => (-1) * (v/100)
+          case "C" => v
+          case _ => (-1) * v
         }
-      }
+      } map (scale(_, 2))
 
       // derive quantity
       val transactionType = xtract("transactionType", str)
@@ -44,10 +47,10 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
 
       val quantity = (transactionType |@| longQuantity |@| shortQuantity) {(t, l, s) =>
         t match {
-          case "B" => (l/100)
-          case _ => (-1) * (s/100)
+          case "B" => l
+          case _ => (-1) * s
         }
-      }
+      } map (scale(_, 2))
 
       netAmount                         |@| 
       quantity                          |@| 

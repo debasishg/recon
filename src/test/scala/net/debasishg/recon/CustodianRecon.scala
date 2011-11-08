@@ -22,7 +22,8 @@ trait CustodianRecon {
     type X = Double
 
     // tolerance function for comparing values
-    override def tolerancefn(x: Double, y: Double) = if (math.abs(x - y) <= 1) true else false
+    override def tolerancefn(x: Double, y: Double)(implicit ed: Equal[Double]) = 
+      if (math.abs(x - y) <= 1) true else false
   }
 
   import engine._
