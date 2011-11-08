@@ -18,10 +18,6 @@ trait CSVFieldXtractor extends Xtractor {
 
   // extract "field" from string "s" after looking up field position in "maps"
   def xtract(field: String)(implicit splits: Array[String]) = maps.get(field).map(s => splits(s))
-
-  // extract "field" from string "s" after looking up field position in "maps" and apply "f" 
-  def xtractAs[T](field: String)(implicit f: String => T, splits: Array[String]) = 
-    maps.get(field).map(s => f(splits(s)))
 }
 
 trait FixedLengthFieldXtractor extends Xtractor {
@@ -30,8 +26,4 @@ trait FixedLengthFieldXtractor extends Xtractor {
 
   // extract "field" from string "s" after looking up field position in "maps"
   def xtract(field: String, s: String) = maps.get(field).map(p => s.substring(p._1, p._1 + p._2).trim)
-
-  // extract "field" from string "s" after looking up field position in "maps" and apply "f" 
-  def xtractAs[T](field: String, s: String)(implicit f: String => T) = 
-    maps.get(field).map(p => f(s.substring(p._1, p._1 + p._2).trim))
 }

@@ -3,6 +3,8 @@ package net.debasishg.recon
 import scalaz._
 import Scalaz._
 
+import Util._
+
 /**
  * @todo
  * 1. trim space for fixed length records => done
@@ -20,17 +22,14 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
         "transactionDate"      -> (295, 8), 
         "transactionType"      -> (110, 1))
 
-  import Numeric.Implicits._
-  def scale[T: Numeric](me: T, by: Int): Double = me.toDouble / math.pow(10, by)
-
   def process(fileName: String) = {
-    implicit val f = (s: String) => s.toDouble
+    val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
     s.map(_.map {str =>
 
       // derive netAmount
-      val effectiveValue = xtractAs("effectiveValue", str) 
+      val effectiveValue = xtract("effectiveValue", str) map f
       val effectiveValueDc = xtract("effectiveValueDc", str) 
 
       val netAmount = (effectiveValue |@| effectiveValueDc) {(v, c) =>
@@ -42,8 +41,8 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
 
       // derive quantity
       val transactionType = xtract("transactionType", str)
-      val longQuantity = xtractAs("longQuantity", str) 
-      val shortQuantity = xtractAs("shortQuantity", str) 
+      val longQuantity = xtract("longQuantity", str) map f
+      val shortQuantity = xtract("shortQuantity", str) map f
 
       val quantity = (transactionType |@| longQuantity |@| shortQuantity) {(t, l, s) =>
         t match {
@@ -72,13 +71,13 @@ trait CustodianAConfig extends CSVFieldXtractor {
         "transactionType"    -> 8)
 
   def process(fileName: String) = {
-    implicit val f = (s: String) => s.toDouble
+    val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
     s.map(_.map {str =>
       implicit val splits: Array[String] = str.split(",") 
-      xtractAs("netAmount")        |@|
-      xtractAs("quantity")         |@|
+      (xtract("netAmount") map f)  |@|
+      (xtract("quantity") map f)   |@|
       xtract("security")           |@|
       xtract("transactionDate")    |@|
       xtract("transactionType") apply CustodianFetchValue.apply
@@ -99,19 +98,19 @@ trait CustodianCConfig extends CSVFieldXtractor {
         "transactionType"    -> 1)
 
   def process(fileName: String) = {
-    implicit val f = (s: String) => s.toDouble
+    val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
     s.map(_.map {str =>
       implicit val splits = str.split(",") 
-      val brokerage = xtractAs("brokerage") 
-      val gstAmount = xtractAs("gstAmount")
-      val netProceedAmount = xtractAs("netProceedAmount")
+      val brokerage = xtract("brokerage") map f
+      val gstAmount = xtract("gstAmount") map f
+      val netProceedAmount = xtract("netProceedAmount") map f
 
       val netAmount = (netProceedAmount |@| brokerage |@| gstAmount) {(a, b, g) => (a - (b + g))}
 
       netAmount                    |@|
-      xtractAs("quantity")         |@|
+      (xtract("quantity") map f)   |@|
       xtract("security")           |@|
       xtract("transactionDate")    |@|
       xtract("transactionType") apply CustodianFetchValue.apply
