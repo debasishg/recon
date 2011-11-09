@@ -44,7 +44,7 @@ trait BalanceRecon {
     client.hgetall[String, Int](id)
   }
 
-  def reconBalance(ids: Seq[ReconId], fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => Boolean)
+  def reconBalance(ids: Seq[ReconId], fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool) = 
     recon[String, Int](ids, fn)
 }

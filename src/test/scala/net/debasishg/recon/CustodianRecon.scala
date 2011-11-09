@@ -6,6 +6,7 @@ import conversions.time._
 import com.redis._
 import serialization._
 import java.util.concurrent.Executors
+import org.scala_tools.time.Imports._
 
 import scalaz._
 import Scalaz._
@@ -13,7 +14,7 @@ import Scalaz._
 case class CustodianFetchValue(netAmount: Double,
   quantity: Double,
   security: String,
-  transactionDate: String,
+  transactionDate: LocalDate,
   transactionType: String)
 
 trait CustodianRecon {
@@ -33,7 +34,7 @@ trait CustodianRecon {
   // typeclass instance for CustodianFetchValue
   implicit object CustodianDataProtocol extends ReconProtocol[CustodianFetchValue, String, Double] {
     def groupKey(v: CustodianFetchValue) = 
-      v.security + v.transactionType
+      v.security + v.transactionType + v.transactionDate.toString
     def matchValues(v: CustodianFetchValue) = 
       Map("quantity" -> v.quantity, "netAmount" -> v.netAmount)
   }
@@ -45,7 +46,7 @@ trait CustodianRecon {
     (implicit clients: RedisClientPool) = loadReconInputData(ds)
 
   def reconCustodianFetchValue(ids: Seq[ReconId], 
-    fn: (List[Option[List[Double]]], (Double, Double) => Boolean) => Boolean)
+    fn: (List[Option[List[Double]]], (Double, Double) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool) = 
     recon[String, Double](ids, fn)
 }

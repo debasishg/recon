@@ -87,7 +87,7 @@ trait ReconEngine {
   }
 
   def recon[K, V <: X](ids: Seq[ReconId], 
-    matchFn: (List[Option[List[V]]], (V, V) => Boolean) => Boolean)
+    matchFn: (List[Option[List[V]]], (V, V) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V], ex: Equal[X]) = {
 
     val fields = clients.withClient {client =>

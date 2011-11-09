@@ -32,11 +32,11 @@ class CustodianReconSpec extends Spec
 
   describe("Custodian A B and C") {
     it("should load csv data from file") {
-      val a = CustodianAConfig.process("/Users/debasishghosh/projects/recon/src/test/resources/DATA_CUSTODIAN_A.csv")
+      val a = CustodianAConfig.process("/home/debasish/my-projects/reconciliation/recon/src/test/resources/DATA_CUSTODIAN_A.csv")
       a.size should equal(39)
-      val b = CustodianBConfig.process("/Users/debasishghosh/projects/recon/src/test/resources/b.txt")
+      val b = CustodianBConfig.process("/home/debasish/my-projects/reconciliation/recon/src/test/resources/DATA_CUSTODIAN_B.txt")
       // b.size should equal(184)
-      val c = CustodianCConfig.process("/Users/debasishghosh/projects/recon/src/test/resources/c.csv")
+      val c = CustodianCConfig.process("/home/debasish/my-projects/reconciliation/recon/src/test/resources/DATA_CUSTODIAN_C.csv")
       // c.size should equal(499)
       val l = loadCustodianFetchValues(Seq(CollectionDef("ra", a.flatten.flatten), CollectionDef("rb", b.flatten.flatten), CollectionDef("rc", c.flatten.flatten)))
       l.size should equal(3)

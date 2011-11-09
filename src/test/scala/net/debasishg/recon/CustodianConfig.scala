@@ -4,14 +4,8 @@ import scalaz._
 import Scalaz._
 
 import Util._
+import org.scala_tools.time.Imports._
 
-/**
- * @todo
- * 1. trim space for fixed length records => done
- * 2. take care of date formatting
- * 3. uniformity of transaction type => hard coded now
- * 4. handling scale => hard coded now
- */
 trait CustodianBConfig extends FixedLengthFieldXtractor {
   val maps = // 0-based start position 
     Map("effectiveValue"       -> (276, 18), 
@@ -51,10 +45,21 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
         }
       } map (scale(_, 2))
 
-      netAmount                         |@| 
-      quantity                          |@| 
-      xtract("security", str)           |@|
-      xtract("transactionDate", str)    |@|
+      // date format = yyyyMMdd
+      def makeDate(dateStr: String) = {
+        val fmt = new org.joda.time.format.DateTimeFormatterBuilder()
+                      .appendYear(4,4)
+                      .appendMonthOfYear(2)
+                      .appendDayOfMonth(2)
+                      .toFormatter
+
+        fmt.parseDateTime(dateStr).toLocalDate
+      }
+
+      netAmount                                         |@| 
+      quantity                                          |@| 
+      xtract("security", str)                           |@|
+      (xtract("transactionDate", str) map makeDate)     |@|
       transactionType apply CustodianFetchValue.apply
     })
   }
@@ -73,14 +78,34 @@ trait CustodianAConfig extends CSVFieldXtractor {
   def process(fileName: String) = {
     val f = (s: String) => s.toDouble
 
+    // date format = dd/MM/yyyy h:mm
+    def makeDate(dateStr: String) = {
+      val fmt = new org.joda.time.format.DateTimeFormatterBuilder()
+                    .appendDayOfMonth(2)
+                    .appendLiteral('/')
+                    .appendMonthOfYear(2)
+                    .appendLiteral('/')
+                    .appendYear(4,4)
+                    .appendLiteral(' ')
+                    .appendHourOfDay(1)
+                    .appendLiteral(':')
+                    .appendMinuteOfHour(2)
+                    .toFormatter
+
+      fmt.parseDateTime(dateStr).toLocalDate
+    }
+
+    val txnTypeTransform = (txn: String) => if (txn startsWith "Purchase") "B" else "S"
+
     val s = loop(fileName)
     s.map(_.map {str =>
       implicit val splits: Array[String] = str.split(",") 
-      (xtract("netAmount") map f)  |@|
-      (xtract("quantity") map f)   |@|
-      xtract("security")           |@|
-      xtract("transactionDate")    |@|
-      xtract("transactionType") apply CustodianFetchValue.apply
+
+      (xtract("netAmount") map f)                     |@|
+      (xtract("quantity") map f)                      |@|
+      xtract("security")                              |@|
+      (xtract("transactionDate") map makeDate)        |@|
+      (xtract("transactionType") map txnTypeTransform) apply CustodianFetchValue.apply
     })
   }
 }
@@ -100,7 +125,23 @@ trait CustodianCConfig extends CSVFieldXtractor {
   def process(fileName: String) = {
     val f = (s: String) => s.toDouble
 
+    // date format = dd-MMM-yy
+    def makeDate(dateStr: String) = {
+      val fmt = new org.joda.time.format.DateTimeFormatterBuilder()
+                    .appendDayOfMonth(2)
+                    .appendLiteral('-')
+                    .appendMonthOfYearShortText()
+                    .appendLiteral('-')
+                    .appendTwoDigitYear(2010)
+                    .toFormatter
+
+      fmt.parseDateTime(dateStr).toLocalDate
+    }
+
+    val txnTypeTransform = (txn: String) => if (txn startsWith "PUR") "B" else "S"
+
     val s = loop(fileName)
+
     s.map(_.map {str =>
       implicit val splits = str.split(",") 
       val brokerage = xtract("brokerage") map f
@@ -109,11 +150,11 @@ trait CustodianCConfig extends CSVFieldXtractor {
 
       val netAmount = (netProceedAmount |@| brokerage |@| gstAmount) {(a, b, g) => (a - (b + g))}
 
-      netAmount                    |@|
-      (xtract("quantity") map f)   |@|
-      xtract("security")           |@|
-      xtract("transactionDate")    |@|
-      xtract("transactionType") apply CustodianFetchValue.apply
+      netAmount                                 |@|
+      (xtract("quantity") map f)                |@|
+      xtract("security")                        |@|
+      (xtract("transactionDate") map makeDate)  |@|
+      (xtract("transactionType") map txnTypeTransform) apply CustodianFetchValue.apply
     })
   }
 }

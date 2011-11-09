@@ -33,7 +33,7 @@ trait TradeDataRecon {
     (implicit clients: RedisClientPool) = loadReconInputData(ds)
 
   def reconTradeData(ids: Seq[ReconId], 
-    fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => Boolean)
+    fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool) = 
     recon[String, Int](ids, fn)
 }
