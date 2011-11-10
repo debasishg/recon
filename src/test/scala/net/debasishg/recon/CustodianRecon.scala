@@ -19,7 +19,6 @@ case class CustodianFetchValue(netAmount: Double,
 
 trait CustodianRecon {
   lazy val engine = new ReconEngine { 
-    type ReconId = String 
     type X = Double
 
     // tolerance function for comparing values
@@ -45,7 +44,7 @@ trait CustodianRecon {
   def loadCustodianFetchValues(ds: Seq[CollectionDef[String, CustodianFetchValue]])
     (implicit clients: RedisClientPool) = loadReconInputData(ds)
 
-  def reconCustodianFetchValue(ids: Seq[ReconId], 
+  def reconCustodianFetchValue(ids: Seq[String], 
     fn: (List[Option[List[Double]]], (Double, Double) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool) = 
     recon[String, Double](ids, fn)

@@ -11,7 +11,6 @@ import scalaz._
 import Scalaz._
 
 trait ReconEngine { 
-  type ReconId 
 
   implicit val timer = new JavaTimer
 
@@ -27,9 +26,9 @@ trait ReconEngine {
   type X
   def tolerancefn(x: X, y: X)(implicit ex: Equal[X]): Boolean = x === y
 
-  def loadOneReconSet[T, K, V](defn: ReconDef[ReconId, T])
+  def loadOneReconSet[T, K, V](defn: ReconDef[String, T])
     (implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], 
-     p: ReconProtocol[T, K, V], mv: Manifest[V]) = clients.withClient {client =>
+     p: ReconProtocol[T, K, V], mv: Manifest[V]): String = clients.withClient {client =>
     import client._
 
     /**
@@ -71,22 +70,22 @@ trait ReconEngine {
     else 
       for(v <- defn.values if defn.maybePred.get(v) == true) load(v)
 
-    hlen(id)
+    defn.id
   }
 
-  def loadReconInputData[T, K, V](ds: Seq[ReconDef[ReconId, T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V], mv: Manifest[V]): Seq[Option[Int]] = {
+  def loadReconInputData[T, K, V](ds: Seq[ReconDef[String, T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, K, V], mv: Manifest[V]): Seq[Either[Throwable, String]] = {
     val fs =
       ds.map {d =>
         futures {
-          loadOneReconSet(d)
+          Right(loadOneReconSet(d))
         }.within(120.seconds) handle {
-          case _: TimeoutException => None
+           case x: TimeoutException => Left(x)
         }
       }
     Future.collect(fs.toSeq) apply
   }
 
-  def recon[K, V <: X](ids: Seq[ReconId], 
+  def recon[K, V <: X](ids: Seq[String], 
     matchFn: (List[Option[List[V]]], (V, V) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V], ex: Equal[X]) = {
 
