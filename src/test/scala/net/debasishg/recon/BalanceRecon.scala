@@ -34,10 +34,10 @@ trait BalanceRecon {
     def matchValues(b: Balance) = Map("amount" -> b.amount.toUSD(b.ccy))
   }
 
-  def loadBalance(balances: CollectionDef[String, Balance])(implicit clients: RedisClientPool) = 
+  def loadBalance(balances: CollectionDef[Balance])(implicit clients: RedisClientPool) = 
     loadOneReconSet(balances)
 
-  def loadBalances(ds: Seq[CollectionDef[String, Balance]])(implicit clients: RedisClientPool) =
+  def loadBalances(ds: Seq[CollectionDef[Balance]])(implicit clients: RedisClientPool) =
     loadReconInputData(ds)
 
   def getBalance(id: ReconId)(implicit clients: RedisClientPool) = clients.withClient {client =>

@@ -32,16 +32,14 @@ trait CustodianRecon {
 
   // typeclass instance for CustodianFetchValue
   implicit object CustodianDataProtocol extends ReconProtocol[CustodianFetchValue, String, Double] {
-    def groupKey(v: CustodianFetchValue) = 
-      v.security + v.transactionType + v.transactionDate.toString
-    def matchValues(v: CustodianFetchValue) = 
-      Map("quantity" -> v.quantity, "netAmount" -> v.netAmount)
+    def groupKey(v: CustodianFetchValue) = v.security + v.transactionType + v.transactionDate.toString
+    def matchValues(v: CustodianFetchValue) = Map("quantity" -> v.quantity, "netAmount" -> v.netAmount)
   }
 
-  def loadCustodianFetchValue(values: CollectionDef[String, CustodianFetchValue])
+  def loadCustodianFetchValue(values: CollectionDef[CustodianFetchValue])
     (implicit clients: RedisClientPool) = loadOneReconSet(values)
 
-  def loadCustodianFetchValues(ds: Seq[CollectionDef[String, CustodianFetchValue]])
+  def loadCustodianFetchValues(ds: Seq[CollectionDef[CustodianFetchValue]])
     (implicit clients: RedisClientPool) = loadReconInputData(ds)
 
   def reconCustodianFetchValue(ids: Seq[String], 

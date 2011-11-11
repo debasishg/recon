@@ -26,10 +26,10 @@ trait TradeDataRecon {
     def matchValues(t: TradeData) = Map("quantity" -> t.quantity, "amount" -> t.amount)
   }
 
-  def loadTradeData(trades: CollectionDef[String, TradeData])
+  def loadTradeData(trades: CollectionDef[TradeData])
     (implicit clients: RedisClientPool) = loadOneReconSet(trades)
 
-  def loadAllTradeData(ds: Seq[CollectionDef[String, TradeData]])
+  def loadAllTradeData(ds: Seq[CollectionDef[TradeData]])
     (implicit clients: RedisClientPool) = loadReconInputData(ds)
 
   def reconTradeData(ids: Seq[ReconId], 
