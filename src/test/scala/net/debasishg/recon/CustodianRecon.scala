@@ -32,7 +32,8 @@ trait CustodianRecon {
 
   // typeclass instance for CustodianFetchValue
   implicit object CustodianDataProtocol extends ReconProtocol[CustodianFetchValue, String, Double] {
-    def groupKey(v: CustodianFetchValue) = v.security + v.transactionType + v.transactionDate.toString
+    def groupKey(v: CustodianFetchValue) = 
+      v.security + ":" + v.transactionType + ":" + v.transactionDate.toString
     def matchValues(v: CustodianFetchValue) = Map("quantity" -> v.quantity, "netAmount" -> v.netAmount)
   }
 

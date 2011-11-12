@@ -59,7 +59,7 @@ class ReconSpec extends Spec
 
       val l = loadBalances(Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2)))
       l.size should equal(2)
-      reconBalance(List("r21", "r22"), match1on1).seq.map(_._2) should equal(Set(true, true))
+      reconBalance(List("r21", "r22"), match1on1).seq.map(_.result) should equal(Set(Match, Match))
     }
   }
 
@@ -82,7 +82,7 @@ class ReconSpec extends Spec
 
       val l = loadBalances(Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2)))
       l.size should equal(2)
-      reconBalance(List("r21", "r22"), match1on1).seq.map(_._2) should equal(Set(true, false, false, false))
+      reconBalance(List("r21", "r22"), match1on1).seq.map(_.result) should equal(Set(Break, Break, Match, Unmatch))
     }
   }
 
@@ -113,7 +113,7 @@ class ReconSpec extends Spec
       val l = loadBalances(Seq(CollectionDef("r31", bs1), CollectionDef("r32", bs2), CollectionDef("r33", bs3)))
       l.size should equal(3)
 
-      reconBalance(List("r31", "r32", "r33"), matchHeadAsSumOfRest).forall(_. _2 == true) should equal(true)
+      reconBalance(List("r31", "r32", "r33"), matchHeadAsSumOfRest).forall(_. result == Match) should equal(true)
     }
   }
 
@@ -139,7 +139,7 @@ class ReconSpec extends Spec
       val gr100 = (b: Balance) => b.amount > 100
       val l = loadBalances(Seq(CollectionDef("r21", bs1, Some(gr100)), CollectionDef("r22", bs2, Some(gr100))))
       l.size should equal(2)
-      reconBalance(List("r21", "r22"), match1on1).seq.map(_._2) should equal(Set(false, false, true))
+      reconBalance(List("r21", "r22"), match1on1).seq.map(_.result) should equal(Set(Break, Break, Match, Unmatch))
     }
   }
 

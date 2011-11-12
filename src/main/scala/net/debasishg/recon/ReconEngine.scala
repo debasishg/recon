@@ -103,7 +103,7 @@ trait ReconEngine {
             case None => none[List[V]]
           }
         }
-        (field, matchFn(maps.toList, tolerancefn))
+        ReconResult(field, maps.toList, matchFn(maps.toList, tolerancefn))
       }
     }
   }
