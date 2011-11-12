@@ -15,4 +15,6 @@ object Util {
 
   import Numeric.Implicits._
   def scale[T: Numeric](me: T, by: Int): Double = me.toDouble / math.pow(10, by)
+
+  type MatchList[V] = List[Option[List[V]]]
 }

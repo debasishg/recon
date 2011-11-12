@@ -11,7 +11,7 @@ object MatchFunctions {
   case object Unmatch extends ReconRez
   case object Break extends ReconRez
 
-  def match1on1[V](maybeVals: List[Option[List[V]]], tolerance: (V, V) => Boolean = (a: V, b: V) => a == b) = {
+  def match1on1[V](maybeVals: MatchList[V], tolerance: (V, V) => Boolean = (a: V, b: V) => a == b) = {
 
     def eqWithTolerance(l1: List[V], l2: List[V]) = {
       zipMap(l1, l2)(tolerance(_, _)).forall(_ == true)
@@ -27,7 +27,7 @@ object MatchFunctions {
     }
   }
 
-  def matchHeadAsSumOfRest[V: Monoid](maybeVals: List[Option[List[V]]], 
+  def matchHeadAsSumOfRest[V: Monoid](maybeVals: MatchList[V], 
     tolerance: (V, V) => Boolean = (a: V, b: V) => a == b) = {
     val h = maybeVals.head
     val r = h map {hd =>

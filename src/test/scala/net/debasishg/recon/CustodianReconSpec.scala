@@ -29,7 +29,7 @@ class CustodianReconSpec extends Spec
   }
 
   override def afterAll = {
-    clients.withClient{ client => client.disconnect }
+    clients.withClient {client => client.disconnect}
     clients.close
   }
 
@@ -42,11 +42,17 @@ class CustodianReconSpec extends Spec
           ("/home/debasish/my-projects/reconciliation/recon/src/test/resources/DATA_CUSTODIAN_B.txt", "B"))
       )
       type EitherEx[A] = Either[Throwable, A]
+
+      val res = 
       loadCustodianFetchValues(
         r.seq.map {case (id, coll) => CollectionDef(id, coll.flatten.flatten)})
              .sequence[EitherEx, String]
              .fold(_ => sys.error("unexpected"), reconCustodianFetchValue(_, matchHeadAsSumOfRest).seq)
-             .foreach(println)
+
+      res.foreach(println)
+      res.filter(_.result == Match).size should equal(66)
+      res.filter(_.result == Unmatch).size should equal(8)
+      res.filter(_.result == Break).size should equal(52)
     }
   }
 }

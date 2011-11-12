@@ -9,6 +9,7 @@ import java.util.concurrent.Executors
 
 import scalaz._
 import Scalaz._
+import Util._
 
 trait ReconEngine { 
 
@@ -59,7 +60,7 @@ trait ReconEngine {
       hsetnx(id, gk, mapId)
       mvs.map {case (k, v) => 
         hsetnx(mapId, k, v) unless { // level 2 hash population
-          hset(mapId, k, m append (hget[V](mapId, k).get, v)) 
+          hset(mapId, k, hget[V](mapId, k).get |+| v) 
         }
       }
     }
@@ -86,7 +87,7 @@ trait ReconEngine {
   }
 
   def recon[K, V <: X](ids: Seq[String], 
-    matchFn: (List[Option[List[V]]], (V, V) => Boolean) => MatchFunctions.ReconRez)
+    matchFn: (MatchList[V], (V, V) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool, parsev: Parse[V], parsek: Parse[K], m: Monoid[V], ex: Equal[X]) = {
 
     val fields = clients.withClient {client =>
