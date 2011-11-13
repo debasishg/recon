@@ -13,7 +13,6 @@ import Scalaz._
 case class Balance(accountNo: String, date: org.joda.time.LocalDate, ccy: String, amount: Int)
 trait BalanceRecon {
   lazy val engine = new ReconEngine { 
-    type ReconId = String 
     type X = Int
   }
 
@@ -29,7 +28,7 @@ trait BalanceRecon {
   import Parse.Implicits.parseInt
 
   // typeclass instance for Balance
-  implicit object BalanceProtocol extends ReconProtocol[Balance, String, Int] {
+  implicit object BalanceProtocol extends ReconProtocol[Balance, Int] {
     def groupKey(b: Balance) = b.accountNo + b.date.toString
     def matchValues(b: Balance) = Map("amount" -> b.amount.toUSD(b.ccy))
   }
@@ -40,13 +39,13 @@ trait BalanceRecon {
   def loadBalances(ds: Seq[CollectionDef[Balance]])(implicit clients: RedisClientPool) =
     loadReconInputData(ds)
 
-  def getBalance(id: ReconId)(implicit clients: RedisClientPool) = clients.withClient {client =>
+  def getBalance(id: String)(implicit clients: RedisClientPool) = clients.withClient {client =>
     client.hgetall[String, Int](id)
   }
 
-  def reconBalance(ids: Seq[ReconId], fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => MatchFunctions.ReconRez)
+  def reconBalance(ids: Seq[String], fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool) = 
-    recon[String, Int](ids, fn)
+    recon[Int](ids, fn)
 }
 
 object BalanceRecon extends BalanceRecon

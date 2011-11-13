@@ -12,4 +12,4 @@ trait ReconDef[T] {
 case class CollectionDef[T](id: String, values: Seq[T], maybePred: Option[T => Boolean] = None) extends ReconDef[T]
 
 import MatchFunctions._
-case class ReconResult[K, V: Monoid](field: K, matched: List[Option[List[V]]], result: ReconRez)
+case class ReconResult[V: Monoid](field: String, matched: List[Option[List[V]]], result: ReconRez)

@@ -31,7 +31,7 @@ trait CustodianRecon {
   import Parse.Implicits.parseDouble
 
   // typeclass instance for CustodianFetchValue
-  implicit object CustodianDataProtocol extends ReconProtocol[CustodianFetchValue, String, Double] {
+  implicit object CustodianDataProtocol extends ReconProtocol[CustodianFetchValue, Double] {
     def groupKey(v: CustodianFetchValue) = 
       v.security + ":" + v.transactionType + ":" + v.transactionDate.toString
     def matchValues(v: CustodianFetchValue) = Map("quantity" -> v.quantity, "netAmount" -> v.netAmount)
@@ -46,7 +46,7 @@ trait CustodianRecon {
   def reconCustodianFetchValue(ids: Seq[String], 
     fn: (List[Option[List[Double]]], (Double, Double) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool) = 
-    recon[String, Double](ids, fn)
+    recon[Double](ids, fn)
 }
 
 object CustodianRecon extends CustodianRecon

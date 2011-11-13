@@ -12,7 +12,6 @@ case class TradeData(accountNo: String,
 
 trait TradeDataRecon {
   lazy val engine = new ReconEngine { 
-    type ReconId = String 
     type X = Int
   }
 
@@ -21,7 +20,7 @@ trait TradeDataRecon {
   import Parse.Implicits.parseInt
 
   // typeclass instance for TradeData
-  implicit object TradeDataProtocol extends ReconProtocol[TradeData, String, Int] {
+  implicit object TradeDataProtocol extends ReconProtocol[TradeData, Int] {
     def groupKey(t: TradeData) = t.accountNo + t.tradeDate.toString + t.security
     def matchValues(t: TradeData) = Map("quantity" -> t.quantity, "amount" -> t.amount)
   }
@@ -32,10 +31,10 @@ trait TradeDataRecon {
   def loadAllTradeData(ds: Seq[CollectionDef[TradeData]])
     (implicit clients: RedisClientPool) = loadReconInputData(ds)
 
-  def reconTradeData(ids: Seq[ReconId], 
+  def reconTradeData(ids: Seq[String], 
     fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool) = 
-    recon[String, Int](ids, fn)
+    recon[Int](ids, fn)
 }
 
 object TradeDataRecon extends TradeDataRecon
