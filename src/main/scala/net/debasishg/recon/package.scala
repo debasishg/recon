@@ -3,7 +3,6 @@ package net.debasishg
 import scalaz._
 import Scalaz._
 
-import recon.ReconResult
 import recon.Util._
 
 package object recon {

@@ -2,15 +2,24 @@ package net.debasishg.recon
 
 import scalaz._
 import Scalaz._
+import Numeric.Implicits._
+import sjson.json.Format
+import sjson.json.DefaultProtocol._
+import sjson.json.JsonSerialization._
 
 object Util {
-  def zipMap[A, B, C](l1: List[A], l2: List[B])(f: (A, B) => C) =
+  def zipMap[A, B, C](l1: List[A], l2: List[B])(f: (A, B) => C): List[C] =
     l1 zip l2 map Function.tupled(f)
 
   def zipPlus[V: Monoid](l1: List[V], l2: List[V]) = zipMap(l1, l2)(_ |+| _)
 
-  import Numeric.Implicits._
   def scale[T: Numeric](me: T, by: Int): Double = me.toDouble / math.pow(10, by)
 
   type MatchList[V] = List[Option[List[V]]]
+
+  def serializeMatchList[V](l: MatchList[V])
+    (implicit m: Format[MatchList[V]]) = tobinary(l)
+
+  def deSerializeMatchList[V](bytes: Array[Byte])
+    (implicit m: Format[MatchList[V]]) = frombinary[MatchList[V]](bytes)
 }

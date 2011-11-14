@@ -159,11 +159,11 @@ trait CustodianCConfig extends CSVFieldXtractor {
 object CustodianCConfig extends CustodianCConfig
 
 object CustodianConfig {
-  def run(files: List[(String, String)]) = files.par.map {file => 
+  def run(files: List[(String, String)], prefix: String) = files.par.map {file => 
     file match {
-      case (name, "A") => ("ra", CustodianAConfig.process(name))
-      case (name, "B") => ("rb", CustodianBConfig.process(name))
-      case (name, "C") => ("rc", CustodianCConfig.process(name))
+      case (name, "A") => ("ra-" + prefix, CustodianAConfig.process(name))
+      case (name, "B") => ("rb-" + prefix, CustodianBConfig.process(name))
+      case (name, "C") => ("rc-" + prefix, CustodianCConfig.process(name))
       case _ => sys.error("Unknown custodian")
     }
   }
