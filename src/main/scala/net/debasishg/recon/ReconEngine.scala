@@ -6,10 +6,12 @@ import conversions.time._
 import com.redis._
 import serialization._
 import java.util.concurrent.Executors
+import org.joda.time.LocalDate
 
 import scalaz._
 import Scalaz._
 import Util._
+import MatchFunctions._
 
 trait ReconEngine { 
 
@@ -17,6 +19,11 @@ trait ReconEngine {
 
   // set up Executors
   lazy val futures = FuturePool(Executors.newFixedThreadPool(8))
+  def clientName = "<default>"
+
+  case class Pkey(id: String, runDate: LocalDate = now) {
+    override def toString = id + ":" + runDate
+  }
 
   /**
    * tolerance function for comparing values
@@ -27,7 +34,7 @@ trait ReconEngine {
   type X
   def tolerancefn(x: X, y: X)(implicit ex: Equal[X]): Boolean = x === y
 
-  def loadOneReconSet[T, V](defn: ReconDef[T])
+  def loadOneReconSet[T, V](defn: ReconDef[T], runDate: LocalDate = now)
     (implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], 
      p: ReconProtocol[T, V], mv: Manifest[V]): String = clients.withClient {client =>
     import client._
@@ -51,7 +58,7 @@ trait ReconEngine {
     def load(value: T) {
       val gk = p.groupKey(value)
       val mvs = p.matchValues(value)
-      val id = defn.id
+      val id = Pkey(defn.id, runDate).toString
 
       // group key + id = key to the second level hash
       val mapId = gk + ":" + id.toString
@@ -74,11 +81,11 @@ trait ReconEngine {
     defn.id
   }
 
-  def loadReconInputData[T, V](ds: Seq[ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Seq[Either[Throwable, String]] = {
+  def loadReconInputData[T, V](ds: Seq[ReconDef[T]], runDate: LocalDate = now)(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Seq[Either[Throwable, String]] = {
     val fs =
       ds.map {d =>
         futures {
-          Right(loadOneReconSet(d))
+          Right(loadOneReconSet(d, runDate))
         }.within(120.seconds) handle {
            case x: TimeoutException => Left(x)
         }
@@ -87,24 +94,79 @@ trait ReconEngine {
   }
 
   def recon[V <: X](ids: Seq[String], 
-    matchFn: (MatchList[V], (V, V) => Boolean) => MatchFunctions.ReconRez)
+    matchFn: (MatchList[V], (V, V) => Boolean) => MatchFunctions.ReconRez, runDate: LocalDate = now)
     (implicit clients: RedisClientPool, parsev: Parse[V], m: Monoid[V], ex: Equal[X]) = {
 
     val fields = clients.withClient {client =>
-      ids.map(client.hkeys[String](_)).view.flatten.flatten.toSet 
+      ids.map(id => client.hkeys[String](Pkey(id, runDate).toString)).view.flatten.flatten.toSet 
     }
 
     fields.par.map {field => 
       clients.withClient {client =>
         import client._
         val maps: Seq[Option[List[V]]] = ids.map {id =>
-          val hk = hget[String](id, field)
+          val hk = hget[String](Pkey(id, runDate).toString, field)
           hk match {
             case Some(s) => hgetall[String, V](s).map(_.values).map(_.toList)
             case None => none[List[V]]
           }
         }
         ReconResult(field, maps.toList, matchFn(maps.toList, tolerancefn))
+      }
+    }
+  }
+
+  def persist[V <: X](rs: Set[ReconResult[V]], runDate: LocalDate = now)
+    (implicit clients: RedisClientPool, m: Monoid[V], p: Parse[MatchList[V]], f: Format) = {
+
+    val matchHashKey = clientName + ":" + runDate + ":" + Match
+    val breakHashKey = clientName + ":" + runDate + ":" + Break
+    val unmatchHashKey = clientName + ":" + runDate + ":" + Unmatch
+
+    clients.withClient {client =>
+      import client._
+      rs map {r =>
+        r.result match {
+          case Match => hset(matchHashKey, r.field, r.matched)
+          case Break => hset(breakHashKey, r.field, r.matched)
+          case Unmatch => hset(unmatchHashKey, r.field, r.matched)
+        }
+      }
+      Map(Match -> (hgetall[String, MatchList[V]](matchHashKey).map(_.keySet.size)),
+          Break -> (hgetall[String, MatchList[V]](breakHashKey).map(_.keySet.size)),
+          Unmatch -> (hgetall[String, MatchList[V]](unmatchHashKey).map(_.keySet.size)))
+    }
+  }
+
+  def consolidateWith[V <: X](date: LocalDate) (implicit clients: RedisClientPool, m: Monoid[V], s: Semigroup[MatchList[V]], 
+    p: Parse[MatchList[V]], f: Format) = {
+
+    val keyFormat = clientName + ":%s:%s"
+    val breakKey = keyFormat.format(date, Break)
+    val currBreakKey = keyFormat.format(now, Break)
+    val unmatchKey = keyFormat.format(date, Unmatch)
+    val currUnmatchKey = keyFormat.format(now, Unmatch)
+
+    clients.withClient {client =>
+      import client._
+      val breaks = hgetall[String, MatchList[V]](breakKey)
+      breaks map {b => 
+        b map {case (f, v) => // f -> field of the prev day
+          hget[MatchList[V]](currBreakKey, f) map {ml => 
+            println("changing break entry for: " + currBreakKey + " prev value = " + v + " curr value = " + ml)
+            hset(currBreakKey, f, ml |+| v)
+          }
+        }
+      }
+
+      val unmatches = hgetall[String, MatchList[V]](unmatchKey)
+      unmatches map {b => 
+        b map {case (f, v) => // f -> field of the prev day
+          hget[MatchList[V]](currUnmatchKey, f) map {ml => 
+            println("changing unmatch entry for: " + currUnmatchKey + " prev value = " + v + " curr value = " + ml)
+            hset(currUnmatchKey, f, ml |+| v)
+          }
+        }
       }
     }
   }

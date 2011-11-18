@@ -6,7 +6,9 @@ import conversions.time._
 import com.redis._
 import serialization._
 import java.util.concurrent.Executors
+import org.joda.time.LocalDate
 import org.scala_tools.time.Imports._
+import Util._
 
 import scalaz._
 import Scalaz._
@@ -20,6 +22,7 @@ case class CustodianFetchValue(netAmount: Double,
 trait CustodianRecon {
   lazy val engine = new ReconEngine { 
     type X = Double
+    override val clientName = "australia-bank"
 
     // tolerance function for comparing values
     override def tolerancefn(x: Double, y: Double)(implicit ed: Equal[Double]) = 
@@ -37,16 +40,16 @@ trait CustodianRecon {
     def matchValues(v: CustodianFetchValue) = Map("quantity" -> v.quantity, "netAmount" -> v.netAmount)
   }
 
-  def loadCustodianFetchValue(values: CollectionDef[CustodianFetchValue])
-    (implicit clients: RedisClientPool) = loadOneReconSet(values)
+  def loadCustodianFetchValue(values: CollectionDef[CustodianFetchValue], runDate: LocalDate = now)
+    (implicit clients: RedisClientPool) = loadOneReconSet(values, runDate)
 
-  def loadCustodianFetchValues(ds: Seq[CollectionDef[CustodianFetchValue]])
-    (implicit clients: RedisClientPool) = loadReconInputData(ds)
+  def loadCustodianFetchValues(ds: Seq[CollectionDef[CustodianFetchValue]], runDate: LocalDate = now)
+    (implicit clients: RedisClientPool) = loadReconInputData(ds, runDate)
 
   def reconCustodianFetchValue(ids: Seq[String], 
-    fn: (List[Option[List[Double]]], (Double, Double) => Boolean) => MatchFunctions.ReconRez)
+    fn: (List[Option[List[Double]]], (Double, Double) => Boolean) => MatchFunctions.ReconRez, runDate: LocalDate = now)
     (implicit clients: RedisClientPool) = 
-    recon[Double](ids, fn)
+    recon[Double](ids, fn, runDate)
 }
 
 object CustodianRecon extends CustodianRecon

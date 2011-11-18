@@ -6,8 +6,11 @@ import Numeric.Implicits._
 import sjson.json.Format
 import sjson.json.DefaultProtocol._
 import sjson.json.JsonSerialization._
+import org.scala_tools.time.Imports._
 
 object Util {
+  val now = DateTime.now.toLocalDate
+
   def zipMap[A, B, C](l1: List[A], l2: List[B])(f: (A, B) => C): List[C] =
     l1 zip l2 map Function.tupled(f)
 
