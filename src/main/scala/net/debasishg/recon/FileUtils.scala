@@ -8,9 +8,11 @@ import IterV._
 import java.io.{File, BufferedReader, Reader, FileReader}
 
 object FileUtils {
+  def printStackTrace(e: Throwable) = IO(rw => (rw, e.printStackTrace))
+
   def bufferFile(f: File) = io {
     new BufferedReader(new FileReader(f))
-  }
+  } 
 
   def closeReader(r: Reader) = io {
     r.close
@@ -26,7 +28,7 @@ object FileUtils {
   def enumFile[A](f: File, i: IterV[String, A]): IO[IterV[String, A]] =
     bracket(bufferFile(f),
       closeReader(_:BufferedReader),
-      enumReader(_:BufferedReader, i))
+      enumReader(_:BufferedReader, i)) 
 
   def enumReader[A](r: BufferedReader, it: IterV[String, A]): IO[IterV[String, A]] = {
     def loop: IterV[String, A] => IO[IterV[String, A]] = {

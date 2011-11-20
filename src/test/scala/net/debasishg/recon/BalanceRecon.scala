@@ -1,22 +1,12 @@
 package net.debasishg.recon
 
-import com.twitter._
-import util.{Future, FuturePool, Return, TimeoutException, Timer, JavaTimer}
-import conversions.time._
-import com.redis._
-import serialization._
-import java.util.concurrent.Executors
-
-import scalaz._
-import Scalaz._
+import Util._
 
 case class Balance(accountNo: String, date: org.joda.time.LocalDate, ccy: String, amount: Int)
-trait BalanceRecon {
-  lazy val engine = new ReconEngine { 
-    type X = Int
-  }
-
-  import engine._
+trait BalanceReconEngine extends ReconEngine {
+  type X = Int
+  override val clientName = "dummy"
+  override val runDate = now
 
   class RInt(orig: Int) {
     def toUSD(ccy: String) = ccy match {
@@ -25,27 +15,12 @@ trait BalanceRecon {
     }
   }
   implicit def enrichInt(i: Int) = new RInt(i)
-  import Parse.Implicits.parseInt
 
   // typeclass instance for Balance
   implicit object BalanceProtocol extends ReconProtocol[Balance, Int] {
     def groupKey(b: Balance) = b.accountNo + b.date.toString
     def matchValues(b: Balance) = Map("amount" -> b.amount.toUSD(b.ccy))
   }
-
-  def loadBalance(balances: CollectionDef[Balance])(implicit clients: RedisClientPool) = 
-    loadOneReconSet(balances)
-
-  def loadBalances(ds: Seq[CollectionDef[Balance]])(implicit clients: RedisClientPool) =
-    loadReconInputData(ds)
-
-  def getBalance(id: String)(implicit clients: RedisClientPool) = clients.withClient {client =>
-    client.hgetall[String, Int](id)
-  }
-
-  def reconBalance(ids: Seq[String], fn: (List[Option[List[Int]]], (Int, Int) => Boolean) => MatchFunctions.ReconRez)
-    (implicit clients: RedisClientPool) = 
-    recon[Int](ids, fn)
 }
 
-object BalanceRecon extends BalanceRecon
+object BalanceReconEngine extends BalanceReconEngine

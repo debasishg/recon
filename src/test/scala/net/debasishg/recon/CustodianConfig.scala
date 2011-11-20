@@ -6,7 +6,8 @@ import Scalaz._
 import Util._
 import org.scala_tools.time.Imports._
 
-trait CustodianBConfig extends FixedLengthFieldXtractor {
+trait CustodianBConfig extends FixedLengthFieldXtractor with ReconSource[CustodianFetchValue] {
+  override val id = "c-b"
   val maps = // 0-based start position 
     Map("effectiveValue"       -> (276, 18), 
         "effectiveValueDc"     -> (294, 1), 
@@ -33,7 +34,7 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
         .toLocalDate
   }
 
-  def process(fileName: String) = {
+  override def process(fileName: String) = {
     val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
@@ -66,7 +67,8 @@ trait CustodianBConfig extends FixedLengthFieldXtractor {
 
 object CustodianBConfig extends CustodianBConfig
 
-trait CustodianAConfig extends CSVFieldXtractor {
+trait CustodianAConfig extends CSVFieldXtractor with ReconSource[CustodianFetchValue] {
+  override val id = "c-a"
   val maps = // 0-based start position 
     Map("netAmount"          -> 17,
         "quantity"           -> 11,
@@ -93,7 +95,7 @@ trait CustodianAConfig extends CSVFieldXtractor {
 
   val txnTypeTransform = (txn: String) => if (txn startsWith "Purchase") "B" else "S"
 
-  def process(fileName: String) = {
+  override def process(fileName: String) = {
     val f = (s: String) => s.toDouble
 
     val s = loop(fileName)
@@ -111,7 +113,8 @@ trait CustodianAConfig extends CSVFieldXtractor {
 
 object CustodianAConfig extends CustodianAConfig
 
-trait CustodianCConfig extends CSVFieldXtractor {
+trait CustodianCConfig extends CSVFieldXtractor with ReconSource[CustodianFetchValue] {
+  override val id = "c-c"
   val maps = // 0-based start position 
     Map("brokerage"          -> 30,
         "gstAmount"          -> 29,
@@ -136,7 +139,7 @@ trait CustodianCConfig extends CSVFieldXtractor {
 
   val txnTypeTransform = (txn: String) => if (txn startsWith "PUR") "B" else "S"
 
-  def process(fileName: String) = {
+  override def process(fileName: String) = {
     val f = (s: String) => s.toDouble
     val s = loop(fileName)
 
@@ -157,14 +160,3 @@ trait CustodianCConfig extends CSVFieldXtractor {
 }
 
 object CustodianCConfig extends CustodianCConfig
-
-object CustodianConfig {
-  def run(files: List[(String, String)], prefix: String) = files.par.map {file => 
-    file match {
-      case (name, "A") => ("ra-" + prefix, CustodianAConfig.process(name))
-      case (name, "B") => ("rb-" + prefix, CustodianBConfig.process(name))
-      case (name, "C") => ("rc-" + prefix, CustodianCConfig.process(name))
-      case _ => sys.error("Unknown custodian")
-    }
-  }
-}

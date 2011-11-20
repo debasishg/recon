@@ -7,9 +7,16 @@ import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 import org.scala_tools.time.Imports._
 
+import sjson.json.DefaultProtocol._
 import com.redis._
-import BalanceRecon._
+import com.redis.serialization._
+import Parse.Implicits.parseInt
+import BalanceReconEngine._
 import MatchFunctions._
+import Util._
+
+import scalaz._
+import Scalaz._
 
 @RunWith(classOf[JUnitRunner])
 class ReconSpec extends Spec 
@@ -18,6 +25,9 @@ class ReconSpec extends Spec
                 with BeforeAndAfterAll {
 
   implicit val clients = new RedisClientPool("localhost", 6379)
+  implicit val format = Format {case l: MatchList[Int] => serializeMatchList(l)}
+  implicit val parseList = Parse[MatchList[Int]](deSerializeMatchList[Int](_))
+  type EitherEx[A] = Either[Throwable, A]
 
   override def beforeEach = {
   }
@@ -31,22 +41,8 @@ class ReconSpec extends Spec
     clients.close
   }
 
-  describe("load data into redis") {
-    it("should load into hash") {
-      val now = DateTime.now.toLocalDate
-      val balances = 
-        List(
-          Balance("a-123", now, "USD", 1000), 
-          Balance("a-134", now, "AUD", 2000),
-          Balance("a-134", now, "GBP", 2500),
-          Balance("a-123", now, "JPY", 250000))
-      loadBalance(CollectionDef("r1", balances))
-    }
-  }
-
   describe("run recon with a 1:1 balance matching data set") {
     it("should generate report") {
-      val now = DateTime.now.toLocalDate
       val bs1 = 
         List(
           Balance("a-123", now, "USD", 1000), 
@@ -57,15 +53,22 @@ class ReconSpec extends Spec
           Balance("a-123", now, "USD", 1000), 
           Balance("a-134", now, "USD", 2000))
 
-      val l = loadBalances(Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2)))
-      l.size should equal(2)
-      reconBalance(List("r21", "r22"), match1on1).seq.map(_.result) should equal(Set(Match, Match))
+      val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
+      val res1 = 
+        loadInput[Balance, Int](defs)
+          .sequence[EitherEx, String]
+          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+
+      res1.foreach {m =>
+        (m get Match) should equal(Some(Some(2)))
+        (m get Break) should equal(Some(Some(0)))
+        (m get Unmatch) should equal(Some(Some(0)))
+      }
     }
   }
 
   describe("run recon with another 1:1 balance matching data set") {
     it("should generate report") {
-      val now = DateTime.now.toLocalDate
       val bs1 = 
         List(
           Balance("a-123", now, "USD", 1000), 
@@ -80,9 +83,17 @@ class ReconSpec extends Spec
           Balance("a-124", now, "USD", 26000), 
           Balance("a-134", now, "AUD", 3250))
 
-      val l = loadBalances(Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2)))
-      l.size should equal(2)
-      reconBalance(List("r21", "r22"), match1on1).seq.map(_.result) should equal(Set(Break, Break, Match, Unmatch))
+      val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
+      val res1 = 
+        loadInput[Balance, Int](defs)
+          .sequence[EitherEx, String]
+          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+
+      res1.foreach {m =>
+        (m get Match) should equal(Some(Some(1)))
+        (m get Break) should equal(Some(Some(2)))
+        (m get Unmatch) should equal(Some(Some(1)))
+      }
     }
   }
 
@@ -110,10 +121,17 @@ class ReconSpec extends Spec
           Balance("a-4", now, "USD", 2000), 
           Balance("a-3", now, "USD", 500))
 
-      val l = loadBalances(Seq(CollectionDef("r31", bs1), CollectionDef("r32", bs2), CollectionDef("r33", bs3)))
-      l.size should equal(3)
+      val defs = Seq(CollectionDef("r31", bs1), CollectionDef("r32", bs2), CollectionDef("r33", bs3))
+      val res1 = 
+        loadInput[Balance, Int](defs)
+          .sequence[EitherEx, String]
+          .fold(_ => none, recon[Int](_, matchHeadAsSumOfRest).seq.some) map persist[Int]
 
-      reconBalance(List("r31", "r32", "r33"), matchHeadAsSumOfRest).forall(_. result == Match) should equal(true)
+      res1.foreach {m =>
+        (m get Match) should equal(Some(Some(4)))
+        (m get Break) should equal(Some(Some(0)))
+        (m get Unmatch) should equal(Some(Some(0)))
+      }
     }
   }
 
@@ -137,9 +155,18 @@ class ReconSpec extends Spec
           Balance("a-134", now, "AUD", 3250))
 
       val gr100 = (b: Balance) => b.amount > 100
-      val l = loadBalances(Seq(CollectionDef("r21", bs1, Some(gr100)), CollectionDef("r22", bs2, Some(gr100))))
-      l.size should equal(2)
-      reconBalance(List("r21", "r22"), match1on1).seq.map(_.result) should equal(Set(Break, Break, Match, Unmatch))
+
+      val defs = Seq(CollectionDef("r21", bs1, Some(gr100)), CollectionDef("r22", bs2, Some(gr100)))
+      val res1 = 
+        loadInput[Balance, Int](defs)
+          .sequence[EitherEx, String]
+          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+
+      res1.foreach {m =>
+        (m get Match) should equal(Some(Some(1)))
+        (m get Break) should equal(Some(Some(2)))
+        (m get Unmatch) should equal(Some(Some(1)))
+      }
     }
   }
 
@@ -148,14 +175,22 @@ class ReconSpec extends Spec
       import ReconDataGenerator._
       val (m, s1, s2) = generateDataForMultipleAccounts
       val start = System.currentTimeMillis
-      val l = loadBalances(Seq(CollectionDef("r41", m), CollectionDef("r42", s1), CollectionDef("r43", s2)))
+
+      val defs = Seq(CollectionDef("r41", m), CollectionDef("r42", s1), CollectionDef("r43", s2))
+      val r1 = loadInput[Balance, Int](defs)
       val afterLoad = System.currentTimeMillis
       println("load time = " + (afterLoad - start))
-      l.size should equal(3)
 
-      reconBalance(List("r41", "r42", "r43"), matchHeadAsSumOfRest)
+      val res1 = r1.sequence[EitherEx, String]
+        .fold(_ => none, recon[Int](_, matchHeadAsSumOfRest).seq.some) map persist[Int]
+
       val end = System.currentTimeMillis
       println("recon time = " + (end - afterLoad))
+      res1.foreach {m =>
+        (m get Match) should equal(Some(Some(1000)))
+        (m get Break) should equal(Some(Some(0)))
+        (m get Unmatch) should equal(Some(Some(0)))
+      }
     }
   }
 }

@@ -7,7 +7,6 @@ import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 
 import com.redis._
-import CustodianRecon._
 import MatchFunctions._
 
 import sjson.json.DefaultProtocol._
@@ -44,92 +43,71 @@ class CustodianReconSpec extends Spec
 
   describe("Custodian A B and C") {
     it("should load csv data from file") {
-      val r1 = CustodianConfig.run(
-        List(
-          (path + "20101024/DATA_CUSTODIAN_C.csv", "C"),
-          (path + "20101024/DATA_CUSTODIAN_A.csv", "A"),
-          (path + "20101024/DATA_CUSTODIAN_B.txt", "B")), "20101024")
+      val engine = new CustodianReconEngine {
+        override val runDate = new DateTime("2010-10-24").toLocalDate
+      }
+      import engine._
+
+      // load from files
+      val files1 = List(
+        (path + "20101024/DATA_CUSTODIAN_C.csv", CustodianCConfig),
+        (path + "20101024/DATA_CUSTODIAN_A.csv", CustodianAConfig),
+        (path + "20101024/DATA_CUSTODIAN_B.txt", CustodianBConfig))
+
+      import Parse.Implicits.parseDouble
 
       type EitherEx[A] = Either[Throwable, A]
 
-      val rd1 = new DateTime("2010-10-24").toLocalDate
+      val res1 = (((fromSource(files1) map loadInput[CustodianFetchValue, Double]) 
+        map (_.sequence[EitherEx, String])) 
+        map (_.fold(_ => none, recon[Double](_, matchHeadAsSumOfRest).seq.some))) map2 persist[Double]
 
-      val rdefs = r1.seq.map {case (id, coll) => 
-        CollectionDef(id, coll.flatten.flatten)
-      }
-
-      val res1 = 
-      loadCustodianFetchValues(rdefs, rd1)
-        .sequence[EitherEx, String]
-        .fold(_ => none, reconCustodianFetchValue(_, matchHeadAsSumOfRest, rd1).seq.some)
-
-      println(res1)
-
-      // res1.foreach(println)
-
-      /**
-      res1.filter(_.result == Unmatch).foreach(println)
-      res1.filter(_.result == Match).size should equal(66)
-      res1.filter(_.result == Unmatch).size should equal(8)
-      res1.filter(_.result == Break).size should equal(52)
-
-      val m1 = engine.persist(res1, rd1)
+      val m1 = Map() ++ res1.flatten.flatten 
       (m1 get Match) should equal(Some(Some(66)))
       (m1 get Break) should equal(Some(Some(52)))
       (m1 get Unmatch) should equal(Some(Some(8)))
 
-      val rd2 = new DateTime("2010-10-25").toLocalDate
-      val r2 = CustodianConfig.run(
-        List(
-          (path + "20101025/DATA_CUSTODIAN_C.csv", "C"),
-          (path + "20101025/DATA_CUSTODIAN_A.csv", "A"),
-          (path + "20101025/DATA_CUSTODIAN_B.txt", "B")), "20101025")
+      val engine2 = new CustodianReconEngine {
+        override val runDate = new DateTime("2010-10-25").toLocalDate
+      }
 
-      val res2 = 
-      loadCustodianFetchValues(
-        r2.seq.map {case (id, coll) => CollectionDef(id, coll.flatten.flatten)}, rd2)
-             .sequence[EitherEx, String]
-             .fold(_ => sys.error("unexpected"), reconCustodianFetchValue(_, matchHeadAsSumOfRest, rd2).seq)
+      // load from files
+      val files2 = List(
+        (path + "20101025/DATA_CUSTODIAN_C.csv", CustodianCConfig),
+        (path + "20101025/DATA_CUSTODIAN_A.csv", CustodianAConfig),
+        (path + "20101025/DATA_CUSTODIAN_B.txt", CustodianBConfig))
 
-      println("---------------------------")
-      res2.filter(_.result == Unmatch).foreach(println)
-      res2.filter(_.result == Match).size should equal(69)
-      res2.filter(_.result == Unmatch).size should equal(5)
-      res2.filter(_.result == Break).size should equal(52)
+      val res2 = (((engine2.fromSource(files2) map engine2.loadInput[CustodianFetchValue, Double]) 
+        map (_.sequence[EitherEx, String])) 
+        map (_.fold(_ => none, engine2.recon[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine2.persist[Double]
 
-      val m2 = engine.persist(res2, rd2)
+      val m2 = Map() ++ res2.flatten.flatten 
       (m2 get Match) should equal(Some(Some(69)))
       (m2 get Break) should equal(Some(Some(52)))
       (m2 get Unmatch) should equal(Some(Some(5)))
 
-      engine.consolidateWith[Double](rd1)
+      engine2.consolidateWith[Double](engine.runDate)
 
-      val rd3 = new DateTime("2010-10-26").toLocalDate
-      val r3 = CustodianConfig.run(
-        List(
-          (path + "20101026/DATA_CUSTODIAN_C.csv", "C"),
-          (path + "20101026/DATA_CUSTODIAN_A.csv", "A"),
-          (path + "20101026/DATA_CUSTODIAN_B.txt", "B")), "20101026")
+      val engine3 = new CustodianReconEngine {
+        override val runDate = new DateTime("2010-10-26").toLocalDate
+      }
 
-      val res3 = 
-      loadCustodianFetchValues(
-        r3.seq.map {case (id, coll) => CollectionDef(id, coll.flatten.flatten)}, rd3)
-             .sequence[EitherEx, String]
-             .fold(_ => sys.error("unexpected"), reconCustodianFetchValue(_, matchHeadAsSumOfRest, rd3).seq)
+      // load from files
+      val files3 = List(
+        (path + "20101026/DATA_CUSTODIAN_C.csv", CustodianCConfig),
+        (path + "20101026/DATA_CUSTODIAN_A.csv", CustodianAConfig),
+        (path + "20101026/DATA_CUSTODIAN_B.txt", CustodianBConfig))
 
-      println("---------------------------")
-      res3.filter(_.result == Unmatch).foreach(println)
-      res3.filter(_.result == Match).size should equal(72)
-      res3.filter(_.result == Unmatch).size should equal(2)
-      res3.filter(_.result == Break).size should equal(52)
+      val res3 = (((engine3.fromSource(files3) map engine3.loadInput[CustodianFetchValue, Double]) 
+        map (_.sequence[EitherEx, String])) 
+        map (_.fold(_ => none, engine3.recon[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine3.persist[Double]
 
-      val m3 = engine.persist(res3, rd3)
+      val m3 = Map() ++ res3.flatten.flatten 
       (m3 get Match) should equal(Some(Some(72)))
       (m3 get Break) should equal(Some(Some(52)))
       (m3 get Unmatch) should equal(Some(Some(2)))
 
-      engine.consolidateWith[Double](rd2)
-    **/
+      engine3.consolidateWith[Double](engine2.runDate)
     }
   }
 

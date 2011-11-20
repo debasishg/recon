@@ -19,13 +19,14 @@ class FileUtilSpec extends Spec
 
   describe("load data into redis") {
     it("should enumerate the first line") {
-      val str = enumFile(new File("/home/debasish/my-projects/recon/src/test/scala/net/debasishg/IterUtilSpec.scala"), head) map (_.run)
+      val str = enumFile(new File("/home/debassh/my-projects/reconciliation/recon/src/test/scala/net/debasishg/recon/FileUtilSpec.scala"), head) map (_.run)
       println(str.unsafePerformIO)
     }
 
     it("should enumerate the whole file") {
-      val str = enumFile(new File("/home/debasish/my-projects/recon/src/test/scala/net/debasishg/IterUtilSpec.scala"), repeatHead) map (_.run)
-      str.unsafePerformIO.foreach(_.foreach(println))
+      val str = enumFile(new File("/home/debasish/my-projects/reconciliation/recon/src/test/scala/net/debasishg/recon/FileUtilSpec.scala"), repeatHead) map (_.run)
+      // str.unsafePerformIO.foreach(_.foreach(println))
+      println(str.unsafePerformIO)
     }
   }
 }

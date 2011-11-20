@@ -29,3 +29,8 @@ trait FixedLengthFieldXtractor extends Xtractor {
   def xtract(field: String, s: String) = 
     (maps get field) map (p => s.substring(p._1, p._1 + p._2).trim)
 }
+
+trait ReconSource[A] {
+  def id: String
+  def process(fileName: String): Seq[Option[Option[A]]]
+}

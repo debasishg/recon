@@ -19,10 +19,21 @@ trait ReconEngine {
 
   // set up Executors
   lazy val futures = FuturePool(Executors.newFixedThreadPool(8))
-  def clientName = "<default>"
+  def clientName: String
+  def runDate: LocalDate
 
-  case class Pkey(id: String, runDate: LocalDate = now) {
+  case class Pkey(id: String) {
     override def toString = id + ":" + runDate
+  }
+
+  /** @todo check error handling for I/O error **/
+  def fromSource[A](fs: Seq[(String, ReconSource[A])]): Option[Seq[ReconDef[A]]] = {
+    try {
+      val pr = fs.par.map {case(file, src) => 
+        CollectionDef(src.id + runDate.toString, src.process(file).flatten.flatten)
+      }
+      some(pr.seq.toSeq)
+    } catch {case e => none}
   }
 
   /**
@@ -34,7 +45,7 @@ trait ReconEngine {
   type X
   def tolerancefn(x: X, y: X)(implicit ex: Equal[X]): Boolean = x === y
 
-  def loadOneReconSet[T, V](defn: ReconDef[T], runDate: LocalDate = now)
+  def loadOneReconSet[T, V](defn: ReconDef[T])
     (implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], 
      p: ReconProtocol[T, V], mv: Manifest[V]): String = clients.withClient {client =>
     import client._
@@ -58,7 +69,7 @@ trait ReconEngine {
     def load(value: T) {
       val gk = p.groupKey(value)
       val mvs = p.matchValues(value)
-      val id = Pkey(defn.id, runDate).toString
+      val id = Pkey(defn.id).toString
 
       // group key + id = key to the second level hash
       val mapId = gk + ":" + id.toString
@@ -81,12 +92,12 @@ trait ReconEngine {
     defn.id
   }
 
-  def loadReconInputData[T, V](ds: Seq[ReconDef[T]], runDate: LocalDate = now)(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Seq[Either[Throwable, String]] = {
+  def loadInput[T, V](ds: Seq[ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Seq[Either[Throwable, String]] = {
     val fs =
       ds.map {d =>
         futures {
-          Right(loadOneReconSet(d, runDate))
-        }.within(120.seconds) handle {
+          Right(loadOneReconSet(d))
+        }.within(300.seconds) handle {
            case x: TimeoutException => Left(x)
         }
       }
@@ -94,18 +105,18 @@ trait ReconEngine {
   }
 
   def recon[V <: X](ids: Seq[String], 
-    matchFn: (MatchList[V], (V, V) => Boolean) => MatchFunctions.ReconRez, runDate: LocalDate = now)
+    matchFn: (MatchList[V], (V, V) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool, parsev: Parse[V], m: Monoid[V], ex: Equal[X]) = {
 
     val fields = clients.withClient {client =>
-      ids.map(id => client.hkeys[String](Pkey(id, runDate).toString)).view.flatten.flatten.toSet 
+      ids.map(id => client.hkeys[String](Pkey(id).toString)).view.flatten.flatten.toSet 
     }
 
     fields.par.map {field => 
       clients.withClient {client =>
         import client._
         val maps: Seq[Option[List[V]]] = ids.map {id =>
-          val hk = hget[String](Pkey(id, runDate).toString, field)
+          val hk = hget[String](Pkey(id).toString, field)
           hk match {
             case Some(s) => hgetall[String, V](s).map(_.values).map(_.toList)
             case None => none[List[V]]
@@ -116,7 +127,7 @@ trait ReconEngine {
     }
   }
 
-  def persist[V <: X](rs: Set[ReconResult[V]], runDate: LocalDate = now)
+  def persist[V <: X](rs: Set[ReconResult[V]])
     (implicit clients: RedisClientPool, m: Monoid[V], p: Parse[MatchList[V]], f: Format) = {
 
     val matchHashKey = clientName + ":" + runDate + ":" + Match
@@ -138,32 +149,36 @@ trait ReconEngine {
     }
   }
 
-  def consolidateWith[V <: X](date: LocalDate) (implicit clients: RedisClientPool, m: Monoid[V], s: Semigroup[MatchList[V]], 
-    p: Parse[MatchList[V]], f: Format) = {
+  def consolidateWith[V <: X](pastDate: LocalDate) (implicit clients: RedisClientPool, m: Monoid[V], s: Semigroup[MatchList[V]], p: Parse[MatchList[V]], f: Format) = {
 
     val keyFormat = clientName + ":%s:%s"
-    val breakKey = keyFormat.format(date, Break)
+    val breakKey = keyFormat.format(pastDate, Break)
     val currBreakKey = keyFormat.format(now, Break)
-    val unmatchKey = keyFormat.format(date, Unmatch)
+    val unmatchKey = keyFormat.format(pastDate, Unmatch)
     val currUnmatchKey = keyFormat.format(now, Unmatch)
 
     clients.withClient {client =>
       import client._
+
+      // get past breaks
       val breaks = hgetall[String, MatchList[V]](breakKey)
-      breaks map {b => 
+
+      // consolidate with current breaks
+      breaks foreach {b => 
         b map {case (f, v) => // f -> field of the prev day
           hget[MatchList[V]](currBreakKey, f) map {ml => 
-            println("changing break entry for: " + currBreakKey + " prev value = " + v + " curr value = " + ml)
             hset(currBreakKey, f, ml |+| v)
           }
         }
       }
 
+      // get past unmatches
       val unmatches = hgetall[String, MatchList[V]](unmatchKey)
-      unmatches map {b => 
+
+      // consolidate with current unmatches
+      unmatches foreach {b => 
         b map {case (f, v) => // f -> field of the prev day
           hget[MatchList[V]](currUnmatchKey, f) map {ml => 
-            println("changing unmatch entry for: " + currUnmatchKey + " prev value = " + v + " curr value = " + ml)
             hset(currUnmatchKey, f, ml |+| v)
           }
         }
