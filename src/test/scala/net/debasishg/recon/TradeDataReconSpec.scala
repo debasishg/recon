@@ -60,7 +60,7 @@ class TradeDataReconSpec extends Spec
       val res1 = 
         loadInput[TradeData, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(2)))
@@ -89,7 +89,7 @@ class TradeDataReconSpec extends Spec
       val res1 = 
         loadInput[TradeData, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
@@ -120,7 +120,7 @@ class TradeDataReconSpec extends Spec
       val res1 = 
         loadInput[TradeData, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
@@ -158,7 +158,7 @@ class TradeDataReconSpec extends Spec
       val res1 = 
         loadInput[TradeData, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(0)))

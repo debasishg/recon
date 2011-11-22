@@ -45,7 +45,7 @@ trait ReconEngine {
   type X
   def tolerancefn(x: X, y: X)(implicit ex: Equal[X]): Boolean = x === y
 
-  def loadOneReconSet[T, V](defn: ReconDef[T])
+  private[this] def loadOneReconSet[T, V](defn: ReconDef[T])
     (implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], 
      p: ReconProtocol[T, V], mv: Manifest[V]): String = clients.withClient {client =>
     import client._
@@ -104,7 +104,7 @@ trait ReconEngine {
     Future.collect(fs.toSeq) apply
   }
 
-  def recon[V <: X](ids: Seq[String], 
+  def reconcile[V <: X](ids: Seq[String], 
     matchFn: (MatchList[V], (V, V) => Boolean) => MatchFunctions.ReconRez)
     (implicit clients: RedisClientPool, parsev: Parse[V], m: Monoid[V], ex: Equal[X]) = {
 

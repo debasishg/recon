@@ -57,7 +57,7 @@ class ReconSpec extends Spec
       val res1 = 
         loadInput[Balance, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(2)))
@@ -87,7 +87,7 @@ class ReconSpec extends Spec
       val res1 = 
         loadInput[Balance, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
@@ -125,7 +125,7 @@ class ReconSpec extends Spec
       val res1 = 
         loadInput[Balance, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, matchHeadAsSumOfRest).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, matchHeadAsSumOfRest).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(4)))
@@ -160,7 +160,7 @@ class ReconSpec extends Spec
       val res1 = 
         loadInput[Balance, Int](defs)
           .sequence[EitherEx, String]
-          .fold(_ => none, recon[Int](_, match1on1).seq.some) map persist[Int]
+          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
@@ -182,7 +182,7 @@ class ReconSpec extends Spec
       println("load time = " + (afterLoad - start))
 
       val res1 = r1.sequence[EitherEx, String]
-        .fold(_ => none, recon[Int](_, matchHeadAsSumOfRest).seq.some) map persist[Int]
+        .fold(_ => none, reconcile[Int](_, matchHeadAsSumOfRest).seq.some) map persist[Int]
 
       val end = System.currentTimeMillis
       println("recon time = " + (end - afterLoad))

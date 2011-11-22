@@ -60,7 +60,7 @@ class CustodianReconSpec extends Spec
 
       val res1 = (((fromSource(files1) map loadInput[CustodianFetchValue, Double]) 
         map (_.sequence[EitherEx, String])) 
-        map (_.fold(_ => none, recon[Double](_, matchHeadAsSumOfRest).seq.some))) map2 persist[Double]
+        map (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 persist[Double]
 
       val m1 = Map() ++ res1.flatten.flatten 
       (m1 get Match) should equal(Some(Some(66)))
@@ -79,7 +79,7 @@ class CustodianReconSpec extends Spec
 
       val res2 = (((engine2.fromSource(files2) map engine2.loadInput[CustodianFetchValue, Double]) 
         map (_.sequence[EitherEx, String])) 
-        map (_.fold(_ => none, engine2.recon[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine2.persist[Double]
+        map (_.fold(_ => none, engine2.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine2.persist[Double]
 
       val m2 = Map() ++ res2.flatten.flatten 
       (m2 get Match) should equal(Some(Some(69)))
@@ -100,7 +100,7 @@ class CustodianReconSpec extends Spec
 
       val res3 = (((engine3.fromSource(files3) map engine3.loadInput[CustodianFetchValue, Double]) 
         map (_.sequence[EitherEx, String])) 
-        map (_.fold(_ => none, engine3.recon[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine3.persist[Double]
+        map (_.fold(_ => none, engine3.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine3.persist[Double]
 
       val m3 = Map() ++ res3.flatten.flatten 
       (m3 get Match) should equal(Some(Some(72)))
@@ -110,81 +110,5 @@ class CustodianReconSpec extends Spec
       engine3.consolidateWith[Double](engine2.runDate)
     }
   }
-
-  /**
-  describe("Custodian A B and C for 20101024") {
-    it("should load csv data from file") {
-      val r = CustodianConfig.run(
-        List(
-          (path + "20101024/DATA_CUSTODIAN_C.csv", "C"),
-          (path + "20101024/DATA_CUSTODIAN_A.csv", "A"),
-          (path + "20101024/DATA_CUSTODIAN_B.txt", "B")), "20101024")
-
-      type EitherEx[A] = Either[Throwable, A]
-
-      val res = 
-      loadCustodianFetchValues(
-        r.seq.map {case (id, coll) => CollectionDef(id, coll.flatten.flatten)})
-             .sequence[EitherEx, String]
-             .fold(_ => sys.error("unexpected"), reconCustodianFetchValue(_, matchHeadAsSumOfRest).seq)
-
-      // res.foreach(println)
-      res.filter(_.result == Match).size should equal(66)
-      res.filter(_.result == Unmatch).size should equal(8)
-      res.filter(_.result == Break).size should equal(52)
-
-      val m = engine persist res 
-      (m get Match) should equal(Some(Some(66)))
-      (m get Break) should equal(Some(Some(52)))
-      (m get Unmatch) should equal(Some(Some(8)))
-    }
-  }
-
-  describe("Custodian A B and C for 20101025") {
-    it("should load csv data from file") {
-      val r = CustodianConfig.run(
-        List(
-          (path + "20101025/DATA_CUSTODIAN_C.csv", "C"),
-          (path + "20101025/DATA_CUSTODIAN_A.csv", "A"),
-          (path + "20101025/DATA_CUSTODIAN_B.txt", "B")), "20101025")
-
-      type EitherEx[A] = Either[Throwable, A]
-
-      val res = 
-      loadCustodianFetchValues(
-        r.seq.map {case (id, coll) => CollectionDef(id, coll.flatten.flatten)})
-             .sequence[EitherEx, String]
-             .fold(_ => sys.error("unexpected"), reconCustodianFetchValue(_, matchHeadAsSumOfRest).seq)
-
-      // res.foreach(println)
-      res.filter(_.result == Match).size should equal(69)
-      res.filter(_.result == Unmatch).size should equal(5)
-      res.filter(_.result == Break).size should equal(52)
-    }
-  }
-
-  describe("Custodian A B and C for 20101026") {
-    it("should load csv data from file") {
-      val r = CustodianConfig.run(
-        List(
-          (path + "20101026/DATA_CUSTODIAN_C.csv", "C"),
-          (path + "20101026/DATA_CUSTODIAN_A.csv", "A"),
-          (path + "20101026/DATA_CUSTODIAN_B.txt", "B")), "20101026")
-
-      type EitherEx[A] = Either[Throwable, A]
-
-      val res = 
-      loadCustodianFetchValues(
-        r.seq.map {case (id, coll) => CollectionDef(id, coll.flatten.flatten)})
-             .sequence[EitherEx, String]
-             .fold(_ => sys.error("unexpected"), reconCustodianFetchValue(_, matchHeadAsSumOfRest).seq)
-
-      // res.foreach(println)
-      res.filter(_.result == Match).size should equal(72)
-      res.filter(_.result == Unmatch).size should equal(2)
-      res.filter(_.result == Break).size should equal(52)
-    }
-  }
-  **/
 }
 
