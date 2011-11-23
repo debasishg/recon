@@ -1,5 +1,8 @@
 package net.debasishg.recon
 
+import util.control.Breaks._
+import collection.mutable.ListBuffer
+
 import com.twitter._
 import util.{Future, FuturePool, Return, TimeoutException, Timer, JavaTimer}
 import conversions.time._
@@ -16,6 +19,7 @@ import MatchFunctions._
 trait ReconEngine { 
 
   implicit val timer = new JavaTimer
+  type EitherEx[A] = Either[Throwable, A]
 
   // set up Executors
   lazy val futures = FuturePool(Executors.newFixedThreadPool(8))
@@ -26,14 +30,23 @@ trait ReconEngine {
     override def toString = id + ":" + runDate
   }
 
-  /** @todo check error handling for I/O error **/
+  // uses breakable as an optimization strategy
+  // break as soon as you get an exception processing an input file
+  // failfast is the right strategy for recon
   def fromSource[A](fs: Seq[(String, ReconSource[A])]): Option[Seq[ReconDef[A]]] = {
-    try {
-      val pr = fs.par.map {case(file, src) => 
-        CollectionDef(src.id + runDate.toString, src.process(file).flatten.flatten)
+    var ex: Throwable = null
+    val list: ListBuffer[ReconDef[A]] = ListBuffer.empty
+    breakable {
+      fs.foreach {case(file, src) => 
+        import src._
+        val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))
+        a match {
+          case Left(x) => ex = x; break
+          case Right(y) => list += y
+        }
       }
-      some(pr.seq.toSeq)
-    } catch {case e => none}
+    }
+    if (ex != null) none else list.toSeq.some
   }
 
   /**
@@ -92,7 +105,7 @@ trait ReconEngine {
     defn.id
   }
 
-  def loadInput[T, V](ds: Seq[ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Seq[Either[Throwable, String]] = {
+  def loadInput[T, V](ds: Seq[ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Either[Throwable, Seq[String]] = {
     val fs =
       ds.map {d =>
         futures {
@@ -101,7 +114,7 @@ trait ReconEngine {
            case x: TimeoutException => Left(x)
         }
       }
-    Future.collect(fs.toSeq) apply
+    (Future.collect(fs.toSeq) apply).sequence[EitherEx, String]
   }
 
   def reconcile[V <: X](ids: Seq[String], 

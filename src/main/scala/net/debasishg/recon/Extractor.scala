@@ -2,12 +2,13 @@ package net.debasishg.recon
 
 import scalaz._
 import Scalaz._
+import scalaz.effects._
 import java.io.File
 import FileUtils._
 
 trait Xtractor {
   def loop(fileName: String) = {
-    val str = enumFile(new File(fileName), repeatHead) map (_.run)
+    val str = enumFile(new File(fileName), repeatHead).map (_.run).catchLeft
     str.unsafePerformIO
   }
 }
@@ -30,7 +31,14 @@ trait FixedLengthFieldXtractor extends Xtractor {
     (maps get field) map (p => s.substring(p._1, p._1 + p._2).trim)
 }
 
-trait ReconSource[A] {
+/**
+ * Processing of Recon source, but only the pure part. All side-effects are handled in the
+ * trait <tt>Xtractor</tt>
+ */
+trait ReconSource[A] {this: Xtractor =>
   def id: String
-  def process(fileName: String): Seq[Option[Option[A]]]
+  def processSingle(str: String): Option[A]
+  final def process(fileName: String): Either[Throwable,List[Option[Option[A]]]] = {
+    loop(fileName) :-> (_ map (_ map processSingle))
+  }
 }

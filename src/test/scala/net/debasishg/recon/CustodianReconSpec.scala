@@ -41,6 +41,34 @@ class CustodianReconSpec extends Spec
     clients.close
   }
 
+  describe("Custodian A B and C for 2010-10-24") {
+    it("should load csv data from file") {
+      val engine = new CustodianReconEngine {
+        override val runDate = new DateTime("2010-10-24").toLocalDate
+      }
+      import engine._
+
+      // load from files
+      val files1 = List(
+        (path + "20101024/DATA_CUSTODIAN_C.csv", CustodianCConfig),
+        (path + "20101024/DATA_CUSTODIAN_A.csv", CustodianAConfig),
+        (path + "20101024/DATA_CUSTODIAN_B.txt", CustodianBConfig))
+
+      import Parse.Implicits.parseDouble
+
+      val res = 
+        ((fromSource(files1) map 
+          loadInput[CustodianFetchValue, Double]) map 
+            (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
+              persist[Double]
+
+      val m1 = Map() ++ res.flatten.flatten 
+      (m1 get Match) should equal(Some(Some(66)))
+      (m1 get Break) should equal(Some(Some(52)))
+      (m1 get Unmatch) should equal(Some(Some(8)))
+    }
+  }
+
   describe("Custodian A B and C") {
     it("should load csv data from file") {
       val engine = new CustodianReconEngine {
@@ -58,9 +86,11 @@ class CustodianReconSpec extends Spec
 
       type EitherEx[A] = Either[Throwable, A]
 
-      val res1 = (((fromSource(files1) map loadInput[CustodianFetchValue, Double]) 
-        map (_.sequence[EitherEx, String])) 
-        map (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 persist[Double]
+      val res1 = 
+        ((fromSource(files1) map 
+          loadInput[CustodianFetchValue, Double]) map 
+            (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
+              persist[Double]
 
       val m1 = Map() ++ res1.flatten.flatten 
       (m1 get Match) should equal(Some(Some(66)))
@@ -77,9 +107,11 @@ class CustodianReconSpec extends Spec
         (path + "20101025/DATA_CUSTODIAN_A.csv", CustodianAConfig),
         (path + "20101025/DATA_CUSTODIAN_B.txt", CustodianBConfig))
 
-      val res2 = (((engine2.fromSource(files2) map engine2.loadInput[CustodianFetchValue, Double]) 
-        map (_.sequence[EitherEx, String])) 
-        map (_.fold(_ => none, engine2.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine2.persist[Double]
+      val res2 = 
+        ((engine2.fromSource(files2) map 
+          engine2.loadInput[CustodianFetchValue, Double]) map 
+            (_.fold(_ => none, engine2.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
+              engine2.persist[Double]
 
       val m2 = Map() ++ res2.flatten.flatten 
       (m2 get Match) should equal(Some(Some(69)))
@@ -98,9 +130,11 @@ class CustodianReconSpec extends Spec
         (path + "20101026/DATA_CUSTODIAN_A.csv", CustodianAConfig),
         (path + "20101026/DATA_CUSTODIAN_B.txt", CustodianBConfig))
 
-      val res3 = (((engine3.fromSource(files3) map engine3.loadInput[CustodianFetchValue, Double]) 
-        map (_.sequence[EitherEx, String])) 
-        map (_.fold(_ => none, engine3.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 engine3.persist[Double]
+      val res3 = 
+        ((engine3.fromSource(files3) map 
+          engine3.loadInput[CustodianFetchValue, Double]) map 
+            (_.fold(_ => none, engine3.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
+              engine3.persist[Double]
 
       val m3 = Map() ++ res3.flatten.flatten 
       (m3 get Match) should equal(Some(Some(72)))

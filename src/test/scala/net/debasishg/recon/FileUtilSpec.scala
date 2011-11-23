@@ -19,7 +19,8 @@ class FileUtilSpec extends Spec
 
   describe("load data into redis") {
     it("should enumerate the first line") {
-      val str = enumFile(new File("/home/debassh/my-projects/reconciliation/recon/src/test/scala/net/debasishg/recon/FileUtilSpec.scala"), head) map (_.run)
+      def handler(th: Throwable) = onException(th) {th => th.getMessage.some}
+      val str = enumFile(new File("/home/debassh/my-projects/reconciliation/recon/src/test/scala/net/debasishg/recon/FileUtilSpec.scala"), head) map (_.run) except handler
       println(str.unsafePerformIO)
     }
 

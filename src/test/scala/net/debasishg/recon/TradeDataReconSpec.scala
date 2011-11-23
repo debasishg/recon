@@ -59,7 +59,6 @@ class TradeDataReconSpec extends Spec
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
       val res1 = 
         loadInput[TradeData, Int](defs)
-          .sequence[EitherEx, String]
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
@@ -88,7 +87,6 @@ class TradeDataReconSpec extends Spec
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
       val res1 = 
         loadInput[TradeData, Int](defs)
-          .sequence[EitherEx, String]
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
@@ -119,7 +117,6 @@ class TradeDataReconSpec extends Spec
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
       val res1 = 
         loadInput[TradeData, Int](defs)
-          .sequence[EitherEx, String]
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>
@@ -157,7 +154,6 @@ class TradeDataReconSpec extends Spec
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2), CollectionDef("r23", bs3))
       val res1 = 
         loadInput[TradeData, Int](defs)
-          .sequence[EitherEx, String]
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
       res1.foreach {m =>

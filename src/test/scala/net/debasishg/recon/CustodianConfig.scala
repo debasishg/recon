@@ -34,34 +34,30 @@ trait CustodianBConfig extends FixedLengthFieldXtractor with ReconSource[Custodi
         .toLocalDate
   }
 
-  override def process(fileName: String) = {
+  override def processSingle(str: String) = {
     val f = (s: String) => s.toDouble
 
-    val s = loop(fileName)
-    s.map(_.map {str =>
+    // derive netAmount
+    val effectiveValue = xtract("effectiveValue", str) map f
+    val effectiveValueDc = xtract("effectiveValueDc", str) 
 
-      // derive netAmount
-      val effectiveValue = xtract("effectiveValue", str) map f
-      val effectiveValueDc = xtract("effectiveValueDc", str) 
+    val netAmount = (effectiveValueDc |@| effectiveValue) (netAmountCalculator(_, _)) map (scale(_, 2))
 
-      val netAmount = (effectiveValueDc |@| effectiveValue) (netAmountCalculator(_, _)) map (scale(_, 2))
+    // derive quantity
+    val transactionType = xtract("transactionType", str)
+    val longQuantity = xtract("longQuantity", str) map f
+    val shortQuantity = xtract("shortQuantity", str) map f
 
-      // derive quantity
-      val transactionType = xtract("transactionType", str)
-      val longQuantity = xtract("longQuantity", str) map f
-      val shortQuantity = xtract("shortQuantity", str) map f
+    val quantity = 
+      (transactionType |@| 
+       longQuantity    |@| 
+       shortQuantity) (quantityCalculator(_, _, _)) map (scale(_, 2))
 
-      val quantity = 
-        (transactionType |@| 
-         longQuantity    |@| 
-         shortQuantity) (quantityCalculator(_, _, _)) map (scale(_, 2))
-
-      netAmount                                         |@| 
-      quantity                                          |@| 
-      xtract("security", str)                           |@|
-      (xtract("transactionDate", str) map makeDate)     |@|
-      transactionType apply CustodianFetchValue.apply
-    })
+    netAmount                                         |@| 
+    quantity                                          |@| 
+    xtract("security", str)                           |@|
+    (xtract("transactionDate", str) map makeDate)     |@|
+    transactionType apply CustodianFetchValue.apply
   }
 }
 
@@ -95,19 +91,15 @@ trait CustodianAConfig extends CSVFieldXtractor with ReconSource[CustodianFetchV
 
   val txnTypeTransform = (txn: String) => if (txn startsWith "Purchase") "B" else "S"
 
-  override def process(fileName: String) = {
+  def processSingle(str: String) = {
     val f = (s: String) => s.toDouble
+    implicit val splits: Array[String] = str split ","  
 
-    val s = loop(fileName)
-    s.map(_.map {str =>
-      implicit val splits: Array[String] = str split ","  
-
-      (xtract("netAmount") map f)                        |@|
-      (xtract("quantity") map f)                         |@|
-      xtract("security")                                 |@|
-      (xtract("transactionDate") map makeDate)           |@|
-      (xtract("transactionType") map txnTypeTransform) apply CustodianFetchValue.apply
-    })
+    (xtract("netAmount") map f)                        |@|
+    (xtract("quantity") map f)                         |@|
+    xtract("security")                                 |@|
+    (xtract("transactionDate") map makeDate)           |@|
+    (xtract("transactionType") map txnTypeTransform) apply CustodianFetchValue.apply
   }
 }
 
@@ -139,23 +131,19 @@ trait CustodianCConfig extends CSVFieldXtractor with ReconSource[CustodianFetchV
 
   val txnTypeTransform = (txn: String) => if (txn startsWith "PUR") "B" else "S"
 
-  override def process(fileName: String) = {
+  override def processSingle(str: String) = {
     val f = (s: String) => s.toDouble
-    val s = loop(fileName)
+    implicit val splits = str split "," 
+    val brokerage = xtract("brokerage") map f
+    val gstAmount = xtract("gstAmount") map f
+    val netProceedAmount = xtract("netProceedAmount") map f
+    val netAmount = (netProceedAmount |@| brokerage |@| gstAmount) {(a, b, g) => (a - (b + g))}
 
-    s.map(_.map {str =>
-      implicit val splits = str split "," 
-      val brokerage = xtract("brokerage") map f
-      val gstAmount = xtract("gstAmount") map f
-      val netProceedAmount = xtract("netProceedAmount") map f
-      val netAmount = (netProceedAmount |@| brokerage |@| gstAmount) {(a, b, g) => (a - (b + g))}
-
-      netAmount                                 |@|
-      (xtract("quantity") map f)                |@|
-      xtract("security")                        |@|
-      (xtract("transactionDate") map makeDate)  |@|
-      (xtract("transactionType") map txnTypeTransform) apply CustodianFetchValue.apply
-    })
+    netAmount                                 |@|
+    (xtract("quantity") map f)                |@|
+    xtract("security")                        |@|
+    (xtract("transactionDate") map makeDate)  |@|
+    (xtract("transactionType") map txnTypeTransform) apply CustodianFetchValue.apply
   }
 }
 
