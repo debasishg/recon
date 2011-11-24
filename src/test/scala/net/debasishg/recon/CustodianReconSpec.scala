@@ -69,7 +69,7 @@ class CustodianReconSpec extends Spec
     }
   }
 
-  describe("Custodian A B and C") {
+  describe("Custodian A B and C for all 3 run days") {
     it("should load csv data from file") {
       val engine = new CustodianReconEngine {
         override val runDate = new DateTime("2010-10-24").toLocalDate
@@ -144,5 +144,37 @@ class CustodianReconSpec extends Spec
       engine3.consolidateWith[Double](engine2.runDate)
     }
   }
-}
 
+  describe("Custodian A B and C for query") {
+    it("should load csv data from file") {
+      val engine = new CustodianReconEngine {
+        override val runDate = new DateTime("2010-10-24").toLocalDate
+      }
+      import engine._
+
+      // load from files
+      val files1 = List(
+        (path + "20101024/DATA_CUSTODIAN_C.csv", CustodianCConfig),
+        (path + "20101024/DATA_CUSTODIAN_A.csv", CustodianAConfig),
+        (path + "20101024/DATA_CUSTODIAN_B.txt", CustodianBConfig))
+
+      import Parse.Implicits.parseDouble
+
+      val res = 
+        ((fromSource(files1) map 
+          loadInput[CustodianFetchValue, Double]) map 
+            (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
+              persist[Double]
+
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Double](client, clientName, runDate)
+          .map(_.size) should equal(Some(66))
+        fetchUnmatchEntries[Double](client, clientName, runDate)
+          .map(_.size) should equal(Some(8))
+        fetchBreakEntries[Double](client, clientName, runDate)
+          .map(_.size) should equal(Some(52))
+      }
+    }
+  }
+}
