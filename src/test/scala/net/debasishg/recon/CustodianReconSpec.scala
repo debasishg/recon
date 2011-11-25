@@ -62,7 +62,7 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
               persist[Double]
 
-      val m1 = Map() ++ res.flatten.flatten 
+      val m1 = Map() ++ res.get.flatten.flatten 
       (m1 get Match) should equal(Some(Some(66)))
       (m1 get Break) should equal(Some(Some(52)))
       (m1 get Unmatch) should equal(Some(Some(8)))
@@ -92,7 +92,7 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
               persist[Double]
 
-      val m1 = Map() ++ res1.flatten.flatten 
+      val m1 = Map() ++ res1.get.flatten.flatten 
       (m1 get Match) should equal(Some(Some(66)))
       (m1 get Break) should equal(Some(Some(52)))
       (m1 get Unmatch) should equal(Some(Some(8)))
@@ -113,7 +113,7 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, engine2.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
               engine2.persist[Double]
 
-      val m2 = Map() ++ res2.flatten.flatten 
+      val m2 = Map() ++ res2.get.flatten.flatten 
       (m2 get Match) should equal(Some(Some(69)))
       (m2 get Break) should equal(Some(Some(52)))
       (m2 get Unmatch) should equal(Some(Some(5)))
@@ -136,7 +136,7 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, engine3.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
               engine3.persist[Double]
 
-      val m3 = Map() ++ res3.flatten.flatten 
+      val m3 = Map() ++ res3.get.flatten.flatten 
       (m3 get Match) should equal(Some(Some(72)))
       (m3 get Break) should equal(Some(Some(52)))
       (m3 get Unmatch) should equal(Some(Some(2)))

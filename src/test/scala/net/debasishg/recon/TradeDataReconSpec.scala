@@ -61,7 +61,7 @@ class TradeDataReconSpec extends Spec
         loadInput[TradeData, Int](defs)
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(2)))
         (m get Break) should equal(Some(Some(0)))
         (m get Unmatch) should equal(Some(Some(1)))
@@ -89,7 +89,7 @@ class TradeDataReconSpec extends Spec
         loadInput[TradeData, Int](defs)
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
         (m get Break) should equal(Some(Some(0)))
         (m get Unmatch) should equal(Some(Some(2)))
@@ -119,7 +119,7 @@ class TradeDataReconSpec extends Spec
         loadInput[TradeData, Int](defs)
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
         (m get Break) should equal(Some(Some(2)))
         (m get Unmatch) should equal(Some(Some(2)))
@@ -156,7 +156,7 @@ class TradeDataReconSpec extends Spec
         loadInput[TradeData, Int](defs)
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(0)))
         (m get Break) should equal(Some(Some(2)))
         (m get Unmatch) should equal(Some(Some(3)))

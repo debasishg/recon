@@ -148,17 +148,25 @@ trait ReconEngine {
     val unmatchHashKey = clientName + ":" + runDate + ":" + Unmatch
 
     clients.withClient {client =>
-      import client._
-      rs map {r =>
-        r.result match {
-          case Match => hset(matchHashKey, r.field, r.matched)
-          case Break => hset(breakHashKey, r.field, r.matched)
-          case Unmatch => hset(unmatchHashKey, r.field, r.matched)
+      val res = client.pipeline {pc =>
+        import pc._
+        try {
+          rs map {r =>
+            r.result match {
+              case Match => hset(matchHashKey, r.field, r.matched)
+              case Break => hset(breakHashKey, r.field, r.matched)
+              case Unmatch => hset(unmatchHashKey, r.field, r.matched)
+            }
+          }
+        } catch { 
+          case th: Throwable => throw RedisMultiExecException(th.getMessage)  // need to log exception too
         }
       }
-      Map(Match -> (hgetall[String, MatchList[V]](matchHashKey).map(_.keySet.size)),
-          Break -> (hgetall[String, MatchList[V]](breakHashKey).map(_.keySet.size)),
-          Unmatch -> (hgetall[String, MatchList[V]](unmatchHashKey).map(_.keySet.size)))
+      res map {_ =>
+        Map(Match -> (client.hgetall[String, MatchList[V]](matchHashKey).map(_.keySet.size)),
+            Break -> (client.hgetall[String, MatchList[V]](breakHashKey).map(_.keySet.size)),
+            Unmatch -> (client.hgetall[String, MatchList[V]](unmatchHashKey).map(_.keySet.size)))
+      }
     }
   }
 

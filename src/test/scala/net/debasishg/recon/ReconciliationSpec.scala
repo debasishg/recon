@@ -60,7 +60,7 @@ class ReconSpec extends Spec
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map 
             persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(2)))
         (m get Break) should equal(Some(Some(0)))
         (m get Unmatch) should equal(Some(Some(0)))
@@ -90,7 +90,7 @@ class ReconSpec extends Spec
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map 
             persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
         (m get Break) should equal(Some(Some(2)))
         (m get Unmatch) should equal(Some(Some(1)))
@@ -128,7 +128,7 @@ class ReconSpec extends Spec
           .fold(_ => none, reconcile[Int](_, matchHeadAsSumOfRest).seq.some) map 
             persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(4)))
         (m get Break) should equal(Some(Some(0)))
         (m get Unmatch) should equal(Some(Some(0)))
@@ -163,7 +163,7 @@ class ReconSpec extends Spec
           .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map 
             persist[Int]
 
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
         (m get Break) should equal(Some(Some(2)))
         (m get Unmatch) should equal(Some(Some(1)))
@@ -186,7 +186,7 @@ class ReconSpec extends Spec
 
       val end = System.currentTimeMillis
       println("recon time = " + (end - afterLoad))
-      res1.foreach {m =>
+      res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(1000)))
         (m get Break) should equal(Some(Some(0)))
         (m get Unmatch) should equal(Some(Some(0)))
