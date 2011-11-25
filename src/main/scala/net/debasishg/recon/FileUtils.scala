@@ -8,17 +8,6 @@ import IterV._
 import java.io.{File, BufferedReader, Reader, FileReader}
 
 object FileUtils {
-  type Tagged[U] = { type Tag = U }
-  type @@[T, U] = T with Tagged[U]
-
-  trait Line
-  trait Err
-
-  type Record = String @@ Line
-  type Error = String @@ Err
-
-  def record(s: String): Record = s.asInstanceOf[Record]
-  def err(s: String): Error = s.asInstanceOf[Error]
 
   def onException[A](e: Throwable)(f: Throwable => A) = IO(rw => (rw, f(e)))
 

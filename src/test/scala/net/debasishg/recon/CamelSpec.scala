@@ -1,0 +1,85 @@
+package net.debasishg.recon
+
+import scala.collection.parallel.ParSet
+import org.scalatest.{Spec, BeforeAndAfterEach, BeforeAndAfterAll}
+import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.junit.JUnitRunner
+import org.junit.runner.RunWith
+
+import com.redis._
+import MatchFunctions._
+
+import sjson.json.DefaultProtocol._
+import Util._
+import FileUtils._
+import com.redis.serialization._
+import org.joda.time.{DateTime, LocalDate}
+
+import scalaz._
+import Scalaz._
+
+import akka.actor.{Actor, ActorRef}
+import akka.camel.{Message, Consumer}
+
+class CReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], processor: ActorRef)
+  (implicit clients: RedisClientPool, 
+            parse: Parse[Double], 
+            m: Monoid[Double], 
+            p: Parse[MatchList[Double]], 
+            f: Format) extends ReconConsumer[CustodianFetchValue, Double](engine, processor) {
+
+  override def endpointUri = "file:/home/debasish/my-projects/reconciliation/recon/src/test/resources/australia/20101024?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
+
+  override def getSourceConfig(file: String): ReconSource[CustodianFetchValue] =
+    if (file contains "DATA_CUSTODIAN_A") CustodianAConfig
+    else if (file contains "DATA_CUSTODIAN_B") CustodianBConfig
+    else CustodianCConfig
+}
+
+@RunWith(classOf[JUnitRunner])
+class CustodianReconCamelSpec extends Spec 
+                              with ShouldMatchers
+                              with BeforeAndAfterEach
+                              with BeforeAndAfterAll {
+
+  implicit val clients = new RedisClientPool("localhost", 6379)
+  implicit val format = Format {case l: MatchList[Double] => serializeMatchList(l)}
+  implicit val parseList = Parse[MatchList[Double]](deSerializeMatchList[Double](_))
+  import Parse.Implicits.parseDouble
+
+  override def beforeEach = {
+  }
+
+  override def afterEach = clients.withClient{
+    client => client.flushdb
+  }
+
+  override def afterAll = {
+    // clients.withClient {client => client.disconnect}
+    // clients.close
+  }
+
+  describe("Custodian A B and C for 2010-10-24") {
+    it("should load csv data from file") {
+      import akka.camel.CamelServiceManager._
+      startCamelService
+      import akka.actor.Actor._
+
+
+      import akka.camel.CamelContextManager
+
+      CamelContextManager.init  // optionally takes a CamelContext as argument
+      CamelContextManager.start // starts the managed CamelContext
+
+      val engine = new CustodianReconEngine {
+        override val runDate = new DateTime("2010-10-24").toLocalDate
+      }
+      import engine._
+
+      val proc = actorOf(
+        new ReconProcessor[CustodianFetchValue, Double](engine, (x: List[String]) => x.size == 3)).start
+      val loader = actorOf(new ReconLoader[CustodianFetchValue, Double](engine, proc)).start
+      val c = actorOf(new CReconConsumer(engine, loader)).start // create Consumer actor
+    }
+  }
+}

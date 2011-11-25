@@ -58,9 +58,9 @@ class CustodianReconSpec extends Spec
 
       val res = 
         ((fromSource(files1) map 
-          loadInput[CustodianFetchValue, Double]) map 
-            (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
-              persist[Double]
+          loadInput) map 
+            (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
+              persist
 
       val m1 = Map() ++ res.get.flatten.flatten 
       (m1 get Match) should equal(Some(Some(66)))
@@ -88,9 +88,9 @@ class CustodianReconSpec extends Spec
 
       val res1 = 
         ((fromSource(files1) map 
-          loadInput[CustodianFetchValue, Double]) map 
-            (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
-              persist[Double]
+          loadInput) map 
+            (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
+              persist
 
       val m1 = Map() ++ res1.get.flatten.flatten 
       (m1 get Match) should equal(Some(Some(66)))
@@ -109,16 +109,16 @@ class CustodianReconSpec extends Spec
 
       val res2 = 
         ((engine2.fromSource(files2) map 
-          engine2.loadInput[CustodianFetchValue, Double]) map 
-            (_.fold(_ => none, engine2.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
-              engine2.persist[Double]
+          engine2.loadInput) map 
+            (_.fold(_ => none, engine2.reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
+              engine2.persist
 
       val m2 = Map() ++ res2.get.flatten.flatten 
       (m2 get Match) should equal(Some(Some(69)))
       (m2 get Break) should equal(Some(Some(52)))
       (m2 get Unmatch) should equal(Some(Some(5)))
 
-      engine2.consolidateWith[Double](engine.runDate)
+      engine2.consolidateWith(engine.runDate)
 
       val engine3 = new CustodianReconEngine {
         override val runDate = new DateTime("2010-10-26").toLocalDate
@@ -132,16 +132,16 @@ class CustodianReconSpec extends Spec
 
       val res3 = 
         ((engine3.fromSource(files3) map 
-          engine3.loadInput[CustodianFetchValue, Double]) map 
-            (_.fold(_ => none, engine3.reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
-              engine3.persist[Double]
+          engine3.loadInput) map 
+            (_.fold(_ => none, engine3.reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
+              engine3.persist
 
       val m3 = Map() ++ res3.get.flatten.flatten 
       (m3 get Match) should equal(Some(Some(72)))
       (m3 get Break) should equal(Some(Some(52)))
       (m3 get Unmatch) should equal(Some(Some(2)))
 
-      engine3.consolidateWith[Double](engine2.runDate)
+      engine3.consolidateWith(engine2.runDate)
     }
   }
 
@@ -162,9 +162,9 @@ class CustodianReconSpec extends Spec
 
       val res = 
         ((fromSource(files1) map 
-          loadInput[CustodianFetchValue, Double]) map 
-            (_.fold(_ => none, reconcile[Double](_, matchHeadAsSumOfRest).seq.some))) map2 
-              persist[Double]
+          loadInput) map 
+            (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
+              persist
 
       import ReconUtils._
       clients.withClient {client =>

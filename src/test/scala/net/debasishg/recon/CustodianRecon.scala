@@ -14,7 +14,7 @@ case class CustodianFetchValue(netAmount: Double,
   transactionDate: LocalDate,
   transactionType: String)
 
-trait CustodianReconEngine extends ReconEngine {
+trait CustodianReconEngine extends ReconEngine[CustodianFetchValue, Double] {
   type X = Double
   override val clientName = "australia-bank"
 

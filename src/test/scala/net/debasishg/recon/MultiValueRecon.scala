@@ -4,7 +4,7 @@ import Util._
 case class TradeData(accountNo: String, 
   tradeDate: org.joda.time.LocalDate, security: String, quantity: Int, amount: Int)
 
-trait TradeDataReconEngine extends ReconEngine {
+trait TradeDataReconEngine extends ReconEngine[TradeData, Int] {
   type X = Int
   override val clientName = "dummy"
   override val runDate = now

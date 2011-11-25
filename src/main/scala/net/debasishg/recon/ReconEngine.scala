@@ -16,7 +16,7 @@ import Scalaz._
 import Util._
 import MatchFunctions._
 
-trait ReconEngine { 
+trait ReconEngine[T, V] { 
 
   implicit val timer = new JavaTimer
   type EitherEx[A] = Either[Throwable, A]
@@ -33,9 +33,9 @@ trait ReconEngine {
   // uses breakable as an optimization strategy
   // break as soon as you get an exception processing an input file
   // failfast is the right strategy for recon
-  def fromSource[A](fs: Seq[(String, ReconSource[A])]): Option[Seq[ReconDef[A]]] = {
+  def fromSource(fs: Seq[(String, ReconSource[T])]): Option[Seq[ReconDef[T]]] = {
     var ex: Throwable = null
-    val list: ListBuffer[ReconDef[A]] = ListBuffer.empty
+    val list: ListBuffer[ReconDef[T]] = ListBuffer.empty
     breakable {
       fs.foreach {case(file, src) => 
         import src._
@@ -49,6 +49,16 @@ trait ReconEngine {
     if (ex != null) none else list.toSeq.some
   }
 
+  def fromSource(fs: (String, ReconSource[T])): Option[ReconDef[T]] = {
+    val (file, src) = fs
+    import src._
+    val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))
+    a match {
+      case Left(x) => none
+      case Right(y) => y.some
+    }
+  }
+
   /**
    * tolerance function for comparing values
    * Can be overridden in making concrete Recon Engines. The default implementation is based on
@@ -56,9 +66,9 @@ trait ReconEngine {
    * @todo Explore if scalaz.Equal can be used
    */
   type X
-  def tolerancefn(x: X, y: X)(implicit ex: Equal[X]): Boolean = x === y
+  def tolerancefn(x: V, y: V)(implicit ex: Equal[V]): Boolean = x === y
 
-  private[this] def loadOneReconSet[T, V](defn: ReconDef[T])
+  def loadOneReconSet(defn: ReconDef[T])
     (implicit clients: RedisClientPool, format: Format, parse: Parse[V], m: Monoid[V], 
      p: ReconProtocol[T, V], mv: Manifest[V]): String = clients.withClient {client =>
     import client._
@@ -105,7 +115,7 @@ trait ReconEngine {
     defn.id
   }
 
-  def loadInput[T, V](ds: Seq[ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Either[Throwable, Seq[String]] = {
+  def loadInput(ds: Seq[ReconDef[T]])(implicit clients: RedisClientPool, parse: Parse[V], m: Monoid[V], p: ReconProtocol[T, V], mv: Manifest[V]): Either[Throwable, Seq[String]] = {
     val fs =
       ds.map {d =>
         futures {
@@ -117,9 +127,9 @@ trait ReconEngine {
     (Future.collect(fs.toSeq) apply).sequence[EitherEx, String]
   }
 
-  def reconcile[V <: X](ids: Seq[String], 
+  def reconcile(ids: Seq[String], 
     matchFn: (MatchList[V], (V, V) => Boolean) => MatchFunctions.ReconRez)
-    (implicit clients: RedisClientPool, parsev: Parse[V], m: Monoid[V], ex: Equal[X]) = {
+    (implicit clients: RedisClientPool, parsev: Parse[V], m: Monoid[V], ex: Equal[V]) = {
 
     val fields = clients.withClient {client =>
       ids.map(id => client.hkeys[String](Pkey(id).toString)).view.flatten.flatten.toSet 
@@ -140,7 +150,7 @@ trait ReconEngine {
     }
   }
 
-  def persist[V <: X](rs: Set[ReconResult[V]])
+  def persist(rs: Set[ReconResult[V]])
     (implicit clients: RedisClientPool, m: Monoid[V], p: Parse[MatchList[V]], f: Format) = {
 
     val matchHashKey = clientName + ":" + runDate + ":" + Match
@@ -170,7 +180,7 @@ trait ReconEngine {
     }
   }
 
-  def consolidateWith[V <: X](pastDate: LocalDate) (implicit clients: RedisClientPool, m: Monoid[V], s: Semigroup[MatchList[V]], p: Parse[MatchList[V]], f: Format) = {
+  def consolidateWith(pastDate: LocalDate) (implicit clients: RedisClientPool, m: Monoid[V], s: Semigroup[MatchList[V]], p: Parse[MatchList[V]], f: Format) = {
 
     val keyFormat = clientName + ":%s:%s"
     val breakKey = keyFormat.format(pastDate, Break)

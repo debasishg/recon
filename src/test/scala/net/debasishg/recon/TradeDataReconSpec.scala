@@ -58,8 +58,8 @@ class TradeDataReconSpec extends Spec
 
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
       val res1 = 
-        loadInput[TradeData, Int](defs)
-          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
+        loadInput(defs)
+          .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
       res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(2)))
@@ -86,8 +86,8 @@ class TradeDataReconSpec extends Spec
 
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
       val res1 = 
-        loadInput[TradeData, Int](defs)
-          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
+        loadInput(defs)
+          .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
       res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
@@ -116,8 +116,8 @@ class TradeDataReconSpec extends Spec
 
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2))
       val res1 = 
-        loadInput[TradeData, Int](defs)
-          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
+        loadInput(defs)
+          .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
       res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(1)))
@@ -153,8 +153,8 @@ class TradeDataReconSpec extends Spec
 
       val defs = Seq(CollectionDef("r21", bs1), CollectionDef("r22", bs2), CollectionDef("r23", bs3))
       val res1 = 
-        loadInput[TradeData, Int](defs)
-          .fold(_ => none, reconcile[Int](_, match1on1).seq.some) map persist[Int]
+        loadInput(defs)
+          .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
       res1.get.foreach {m =>
         (m get Match) should equal(Some(Some(0)))

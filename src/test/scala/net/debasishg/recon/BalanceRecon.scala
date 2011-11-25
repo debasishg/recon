@@ -3,7 +3,7 @@ package net.debasishg.recon
 import Util._
 
 case class Balance(accountNo: String, date: org.joda.time.LocalDate, ccy: String, amount: Int)
-trait BalanceReconEngine extends ReconEngine {
+trait BalanceReconEngine extends ReconEngine[Balance, Int] {
   type X = Int
   override val clientName = "dummy"
   override val runDate = now
