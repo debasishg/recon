@@ -173,6 +173,40 @@ class ReconSpec extends Spec
 
   describe("generate data") {
     it("should generate data") {
+      val engine = new BalanceReconEngine {
+        override val runDate = new DateTime("2011-11-26").toLocalDate
+      }
+      import engine._
+
+      // load from files
+      val files1 = List(
+        ("/home/debasish/balance/main.csv", BalanceMainConfig),
+        ("/home/debasish/balance/sub1.csv", BalanceSub1Config),
+        ("/home/debasish/balance/sub2.csv", BalanceSub2Config))
+
+      import Parse.Implicits.parseInt
+
+      val start = System.currentTimeMillis
+      val res = fromSource(files1)
+      println("elapsed = " + (System.currentTimeMillis - start))
+      // val res = 
+        // ((fromSource(files1) map 
+          // loadInput) map 
+            // (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
+              // persist
+      // println(res)
+
+      // res.get.foreach {m =>
+        // (m get Match) should equal(Some(Some(1000)))
+        // (m get Break) should equal(Some(Some(0)))
+        // (m get Unmatch) should equal(Some(Some(0)))
+      // }
+    }
+  }
+
+  /**
+  describe("generate data") {
+    it("should generate data") {
       import ReconDataGenerator._
       val (m, s1, s2) = generateDataForMultipleAccounts
       val start = System.currentTimeMillis
@@ -193,5 +227,6 @@ class ReconSpec extends Spec
       }
     }
   }
+  **/
 }
 

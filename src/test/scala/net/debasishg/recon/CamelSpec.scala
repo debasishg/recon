@@ -20,15 +20,18 @@ import Scalaz._
 
 import akka.actor.{Actor, ActorRef}
 import akka.camel.{Message, Consumer}
+import akka.camel.CamelServiceManager._
+import akka.actor.Actor._
+import akka.camel.CamelContextManager
 
-class CReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], processor: ActorRef)
+class CReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], processor: ActorRef, date: String)
   (implicit clients: RedisClientPool, 
             parse: Parse[Double], 
             m: Monoid[Double], 
             p: Parse[MatchList[Double]], 
             f: Format) extends ReconConsumer[CustodianFetchValue, Double](engine, processor) {
 
-  override def endpointUri = "file:/home/debasish/my-projects/reconciliation/recon/src/test/resources/australia/20101024?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
+  override def endpointUri = "file:/home/debasish/my-projects/reconciliation/recon/src/test/resources/australia/" + date + "?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
 
   override def getSourceConfig(file: String): ReconSource[CustodianFetchValue] =
     if (file contains "DATA_CUSTODIAN_A") CustodianAConfig
@@ -59,27 +62,27 @@ class CustodianReconCamelSpec extends Spec
     // clients.close
   }
 
+  def runReconFor(date: LocalDate, dateString: String) = {
+    val engine = new CustodianReconEngine {
+      override val runDate = date
+    }
+    import engine._
+
+    val proc = actorOf(
+      new ReconProcessor[CustodianFetchValue, Double](engine, (x: List[String]) => x.size == 3)).start
+    val loader = actorOf(new ReconLoader[CustodianFetchValue, Double](engine, proc)).start
+    val c = actorOf(new CReconConsumer(engine, loader, dateString)).start // create Consumer actor
+  }
+
   describe("Custodian A B and C for 2010-10-24") {
     it("should load csv data from file") {
-      import akka.camel.CamelServiceManager._
       startCamelService
-      import akka.actor.Actor._
-
-
-      import akka.camel.CamelContextManager
-
       CamelContextManager.init  // optionally takes a CamelContext as argument
       CamelContextManager.start // starts the managed CamelContext
 
-      val engine = new CustodianReconEngine {
-        override val runDate = new DateTime("2010-10-24").toLocalDate
-      }
-      import engine._
-
-      val proc = actorOf(
-        new ReconProcessor[CustodianFetchValue, Double](engine, (x: List[String]) => x.size == 3)).start
-      val loader = actorOf(new ReconLoader[CustodianFetchValue, Double](engine, proc)).start
-      val c = actorOf(new CReconConsumer(engine, loader)).start // create Consumer actor
+      runReconFor(new DateTime("2010-10-24").toLocalDate, "20101024")
+      runReconFor(new DateTime("2010-10-25").toLocalDate, "20101025")
+      runReconFor(new DateTime("2010-10-26").toLocalDate, "20101026")
     }
   }
 }

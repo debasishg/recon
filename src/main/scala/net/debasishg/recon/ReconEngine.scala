@@ -37,11 +37,11 @@ trait ReconEngine[T, V] {
     var ex: Throwable = null
     val list: ListBuffer[ReconDef[T]] = ListBuffer.empty
     breakable {
-      fs.foreach {case(file, src) => 
+      fs.par.foreach {case(file, src) => 
         import src._
         val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))
         a match {
-          case Left(x) => ex = x; break
+          case Left(x) => ex = x; x.printStackTrace; break
           case Right(y) => list += y
         }
       }

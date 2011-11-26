@@ -12,7 +12,7 @@ object FileUtils {
   def onException[A](e: Throwable)(f: Throwable => A) = IO(rw => (rw, f(e)))
 
   def bufferFile(f: File) = io {
-    new BufferedReader(new FileReader(f))
+    new BufferedReader(new FileReader(f), 20000)
   } 
 
   def closeReader(r: Reader) = io {
@@ -31,6 +31,7 @@ object FileUtils {
       closeReader(_:BufferedReader),
       enumReader(_:BufferedReader, i)) 
 
+  /**
   def enumReader[A](r: BufferedReader, it: IterV[String, A]): IO[IterV[String, A]] = {
     def loop: IterV[String, A] => IO[IterV[String, A]] = {
       case i@Done(_, _) => io(i)
@@ -41,6 +42,19 @@ object FileUtils {
     }
     loop(it)
   }
+  **/
+
+  def enumReader[A](r: BufferedReader, it: IterV[String, A]): IO[IterV[String, A]] = { 
+    def loop(x: IterV[String, A]): IterV[String, A] = x match { 
+      case Done(_, _) => x 
+      case Cont(k) => { 
+        val s = r.readLine 
+        if (s == null) x else loop(k(El(s))) 
+      } 
+    } 
+    io { loop(it) } 
+  } 
+
 
   val repeatHead = repeat[String, Option[String], List](head[String])
 }

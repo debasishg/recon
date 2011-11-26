@@ -1,6 +1,8 @@
 package net.debasishg.recon
 
 import org.scala_tools.time.Imports._
+import java.io._
+
 object ReconDataGenerator {
   val now = DateTime.now.toLocalDate
 
@@ -31,7 +33,25 @@ object ReconDataGenerator {
       ss._1.flatten.map(subList1 += _)
       ss._2.flatten.map(subList2 += _)
     }
+
+    /**
+    printToFile(new File("/home/debasish/balance/main.csv"))(p => {
+      mainList.flatten.toList.map(b => b.accountNo + "," + b.amount).foreach(p.println)
+    })
+    printToFile(new File("/home/debasish/balance/sub1.csv"))(p => {
+      subList1.toList.map(b => b.accountNo + "," + b.amount).foreach(p.println)
+    })
+    printToFile(new File("/home/debasish/balance/sub2.csv"))(p => {
+      subList2.toList.map(b => b.accountNo + "," + b.amount).foreach(p.println)
+    })
+    **/
+
     // each list will have 100000 records
     (mainList.flatten.toList, subList1.toList, subList2.toList)
+  }
+
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
+    val p = new java.io.PrintWriter(f)
+    try { op(p) } finally { p.close() }
   }
 }
