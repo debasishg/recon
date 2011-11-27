@@ -23,39 +23,39 @@ import akka.camel.{Message, Consumer}
 import akka.camel.CamelServiceManager._
 import akka.actor.Actor._
 import akka.camel.CamelContextManager
+import ReconActors._
 
-class CReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], processor: ActorRef, date: String)
+class CReconConsumer(engine: ReconEngine[Balance, Int], completionPred: List[String] => Boolean)
   (implicit clients: RedisClientPool, 
-            parse: Parse[Double], 
-            m: Monoid[Double], 
-            p: Parse[MatchList[Double]], 
-            f: Format) extends ReconConsumer[CustodianFetchValue, Double](engine, processor) {
+            parse: Parse[Int], 
+            m: Monoid[Int], 
+            r: ReconProtocol[Balance, Int], 
+            p: Parse[MatchList[Int]], 
+            f: Format) extends ReconConsumer[Balance, Int](engine, completionPred) {
 
-  override def endpointUri = "file:/home/debasish/my-projects/reconciliation/recon/src/test/resources/australia/" + date + "?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
+  override def endpointUri = "file:/Users/debasishghosh/balance?noop=true&include=.*\\.csv&sortBy=file:name"
 
-  override def getSourceConfig(file: String): ReconSource[CustodianFetchValue] =
-    if (file contains "DATA_CUSTODIAN_A") CustodianAConfig
-    else if (file contains "DATA_CUSTODIAN_B") CustodianBConfig
-    else CustodianCConfig
+  override def getSourceConfig(file: String): ReconSource[Balance] =
+    if (file contains "main") BalanceMainConfig
+    else if (file contains "sub1") BalanceSub1Config
+    else BalanceSub2Config
 }
 
 @RunWith(classOf[JUnitRunner])
-class CustodianReconCamelSpec extends Spec 
+class BalanceReconCamelSpec extends Spec 
                               with ShouldMatchers
                               with BeforeAndAfterEach
                               with BeforeAndAfterAll {
 
   implicit val clients = new RedisClientPool("localhost", 6379)
-  implicit val format = Format {case l: MatchList[Double] => serializeMatchList(l)}
-  implicit val parseList = Parse[MatchList[Double]](deSerializeMatchList[Double](_))
-  import Parse.Implicits.parseDouble
+  implicit val format = Format {case l: MatchList[Int] => serializeMatchList(l)}
+  implicit val parseList = Parse[MatchList[Int]](deSerializeMatchList[Int](_))
+  import Parse.Implicits.parseInt
 
   override def beforeEach = {
   }
 
-  override def afterEach = clients.withClient{
-    client => client.flushdb
-  }
+  // override def afterEach = clients.withClient{ client => client.flushdb }
 
   override def afterAll = {
     // clients.withClient {client => client.disconnect}
@@ -63,15 +63,15 @@ class CustodianReconCamelSpec extends Spec
   }
 
   def runReconFor(date: LocalDate, dateString: String) = {
-    val engine = new CustodianReconEngine {
+    val engine = new BalanceReconEngine {
       override val runDate = date
     }
     import engine._
 
-    val proc = actorOf(
-      new ReconProcessor[CustodianFetchValue, Double](engine, (x: List[String]) => x.size == 3)).start
-    val loader = actorOf(new ReconLoader[CustodianFetchValue, Double](engine, proc)).start
-    val c = actorOf(new CReconConsumer(engine, loader, dateString)).start // create Consumer actor
+    // val proc = actorOf(
+      // new ReconProcessor[Balance, Int](engine, (x: List[String]) => x.size == 3)).start
+    // val loader = actorOf(new ReconLoader[Balance, Int](engine, proc)).start
+    actorOf(new CReconConsumer(engine, (x: List[String]) => x.size == 3)).start // create Consumer actor
   }
 
   describe("Custodian A B and C for 2010-10-24") {
@@ -80,9 +80,10 @@ class CustodianReconCamelSpec extends Spec
       CamelContextManager.init  // optionally takes a CamelContext as argument
       CamelContextManager.start // starts the managed CamelContext
 
+      val start = System.currentTimeMillis
+      println("started at : " + start)
       runReconFor(new DateTime("2010-10-24").toLocalDate, "20101024")
-      runReconFor(new DateTime("2010-10-25").toLocalDate, "20101025")
-      runReconFor(new DateTime("2010-10-26").toLocalDate, "20101026")
+      println("elapsed = " + (System.currentTimeMillis - start))
     }
   }
 }

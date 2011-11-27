@@ -24,7 +24,7 @@ object ReconDataGenerator {
     var subList2 = new collection.mutable.ListBuffer[Balance]
 
     // 1000 accounts
-    (1 to 1000).foreach {a =>
+    (1 to 500).foreach {a =>
       // 100 records per account in each list
       // 2 sub lists
       val (m, s) = genTxnValue("acc" + a, 200, 2)
@@ -34,17 +34,15 @@ object ReconDataGenerator {
       ss._2.flatten.map(subList2 += _)
     }
 
-    /**
-    printToFile(new File("/home/debasish/balance/main.csv"))(p => {
+    printToFile(new File("/Users/debasishghosh/balance/main.csv"))(p => {
       mainList.flatten.toList.map(b => b.accountNo + "," + b.amount).foreach(p.println)
     })
-    printToFile(new File("/home/debasish/balance/sub1.csv"))(p => {
+    printToFile(new File("/Users/debasishghosh/balance/sub1.csv"))(p => {
       subList1.toList.map(b => b.accountNo + "," + b.amount).foreach(p.println)
     })
-    printToFile(new File("/home/debasish/balance/sub2.csv"))(p => {
+    printToFile(new File("/Users/debasishghosh/balance/sub2.csv"))(p => {
       subList2.toList.map(b => b.accountNo + "," + b.amount).foreach(p.println)
     })
-    **/
 
     // each list will have 100000 records
     (mainList.flatten.toList, subList1.toList, subList2.toList)

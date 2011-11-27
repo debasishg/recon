@@ -180,21 +180,21 @@ class ReconSpec extends Spec
 
       // load from files
       val files1 = List(
-        ("/home/debasish/balance/main.csv", BalanceMainConfig),
-        ("/home/debasish/balance/sub1.csv", BalanceSub1Config),
-        ("/home/debasish/balance/sub2.csv", BalanceSub2Config))
+        ("/Users/debasishghosh/balance/main.csv", BalanceMainConfig),
+        ("/Users/debasishghosh/balance/sub1.csv", BalanceSub1Config),
+        ("/Users/debasishghosh/balance/sub2.csv", BalanceSub2Config))
 
       import Parse.Implicits.parseInt
 
       val start = System.currentTimeMillis
-      val res = fromSource(files1)
+      // val res = fromSource(files1)
+      val res = 
+        ((fromSource(files1) map 
+          loadInput) map 
+            (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
+              persist
+      println(res)
       println("elapsed = " + (System.currentTimeMillis - start))
-      // val res = 
-        // ((fromSource(files1) map 
-          // loadInput) map 
-            // (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
-              // persist
-      // println(res)
 
       // res.get.foreach {m =>
         // (m get Match) should equal(Some(Some(1000)))
@@ -204,7 +204,7 @@ class ReconSpec extends Spec
     }
   }
 
-  /**
+/**
   describe("generate data") {
     it("should generate data") {
       import ReconDataGenerator._
@@ -221,12 +221,11 @@ class ReconSpec extends Spec
       val end = System.currentTimeMillis
       println("recon time = " + (end - afterLoad))
       res1.get.foreach {m =>
-        (m get Match) should equal(Some(Some(1000)))
+        (m get Match) should equal(Some(Some(500)))
         (m get Break) should equal(Some(Some(0)))
         (m get Unmatch) should equal(Some(Some(0)))
       }
     }
   }
-  **/
+**/
 }
-

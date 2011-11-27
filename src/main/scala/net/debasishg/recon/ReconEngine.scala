@@ -49,10 +49,12 @@ trait ReconEngine[T, V] {
     if (ex != null) none else list.toSeq.some
   }
 
-  def fromSource(fs: (String, ReconSource[T])): Option[ReconDef[T]] = {
+  def fromSource1(fs: (String, ReconSource[T])): Option[ReconDef[T]] = {
     val (file, src) = fs
+    val start = System.currentTimeMillis
     import src._
     val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))
+    println("elapsed in fromSource: " + file + " " + (System.currentTimeMillis - start))
     a match {
       case Left(x) => none
       case Right(y) => y.some
@@ -169,7 +171,9 @@ trait ReconEngine[T, V] {
             }
           }
         } catch { 
-          case th: Throwable => throw RedisMultiExecException(th.getMessage)  // need to log exception too
+          case th: Throwable => 
+            println("************** oops .. exception " + th.getMessage)
+            throw RedisMultiExecException(th.getMessage)  // need to log exception too
         }
       }
       res map {_ =>
