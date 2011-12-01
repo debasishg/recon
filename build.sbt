@@ -13,6 +13,7 @@ libraryDependencies <++= scalaVersion { scalaVersion =>
   val scalatestVersion: String => String = Map(("2.8.0" -> "1.3.1.RC2"), ("2.8.1" -> "1.5.1")) getOrElse (_, "1.6.1")
   // The dependencies with proper scope
   Seq(
+    "org.scala-lang.plugins"         % "continuations"   % scalaVersion,
     "net.debasishg"                 %% "redisclient"     % "2.4.1",
     "net.debasishg"                 %% "sjson"           % "0.15",
     "org.slf4j"                      % "slf4j-api"       % "1.6.1",
@@ -30,7 +31,11 @@ libraryDependencies <++= scalaVersion { scalaVersion =>
   )
 }
 
-scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-Xcheckinit")
+autoCompilerPlugins := true
+
+addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.1")
+
+scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-Xcheckinit", "-P:continuations:enable")
 
 // TODO: Enable this with SBT 0.10.2 (See: https://github.com/harrah/xsbt/issues/147)
 // scaladocOptions <++= (name, version) map { (name, ver) =>

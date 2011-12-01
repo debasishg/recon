@@ -23,6 +23,6 @@ object Util {
   def serializeMatchList[V](l: MatchList[V])
     (implicit m: Format[MatchList[V]]) = tobinary(l)
 
-  def deSerializeMatchList[V](bytes: Array[Byte])
+  def deSerializeMatchList[V](bytes: Array[Byte]) 
     (implicit m: Format[MatchList[V]]) = frombinary[MatchList[V]](bytes)
 }

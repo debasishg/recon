@@ -37,7 +37,7 @@ trait ReconEngine[T, V] {
     var ex: Throwable = null
     val list: ListBuffer[ReconDef[T]] = ListBuffer.empty
     breakable {
-      fs.par.foreach {case(file, src) => 
+      fs.foreach {case(file, src) => 
         import src._
         val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))
         a match {
@@ -54,7 +54,6 @@ trait ReconEngine[T, V] {
     val start = System.currentTimeMillis
     import src._
     val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))
-    println("elapsed in fromSource: " + file + " " + (System.currentTimeMillis - start))
     a match {
       case Left(x) => none
       case Right(y) => y.some
@@ -159,8 +158,9 @@ trait ReconEngine[T, V] {
     val breakHashKey = clientName + ":" + runDate + ":" + Break
     val unmatchHashKey = clientName + ":" + runDate + ":" + Unmatch
 
+    val res = 
     clients.withClient {client =>
-      val res = client.pipeline {pc =>
+      client.pipeline {pc =>
         import pc._
         try {
           rs map {r =>
@@ -172,16 +172,19 @@ trait ReconEngine[T, V] {
           }
         } catch { 
           case th: Throwable => 
-            println("************** oops .. exception " + th.getMessage)
             throw RedisMultiExecException(th.getMessage)  // need to log exception too
         }
       }
-      res map {_ =>
-        Map(Match -> (client.hgetall[String, MatchList[V]](matchHashKey).map(_.keySet.size)),
-            Break -> (client.hgetall[String, MatchList[V]](breakHashKey).map(_.keySet.size)),
-            Unmatch -> (client.hgetall[String, MatchList[V]](unmatchHashKey).map(_.keySet.size)))
-      }
     }
+    res.size
+//    clients.withClient {client =>
+//      res map {_ =>
+//        Map[ReconRez, Option[Int]](
+//            Match -> (client.hgetall[String, MatchList[V]](matchHashKey).map(_.keySet.size)),
+//            Break -> (client.hgetall[String, MatchList[V]](breakHashKey).map(_.keySet.size)),
+//            Unmatch -> (client.hgetall[String, MatchList[V]](unmatchHashKey).map(_.keySet.size)))
+//      }
+//    }
   }
 
   def consolidateWith(pastDate: LocalDate) (implicit clients: RedisClientPool, m: Monoid[V], s: Semigroup[MatchList[V]], p: Parse[MatchList[V]], f: Format) = {

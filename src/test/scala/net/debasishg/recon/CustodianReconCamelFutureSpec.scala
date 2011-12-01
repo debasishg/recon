@@ -23,9 +23,10 @@ import akka.camel.{Message, Consumer}
 import akka.camel.CamelServiceManager._
 import akka.actor.Actor._
 import akka.camel.CamelContextManager
-import ReconActors._
+import akka.dispatch.Future
+import ReconNActors._
 
-class CustodianReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], completionPred: List[String] => Boolean, date: String)
+class CustodianReconCon(engine: ReconEngine[CustodianFetchValue, Double], completionPred: List[Future[_]] => Boolean, date: String)
   (implicit clients: RedisClientPool, 
             parse: Parse[Double], 
             m: Monoid[Double], 
@@ -34,7 +35,6 @@ class CustodianReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], c
             f: Format) extends ReconConsumer[CustodianFetchValue, Double](engine, completionPred) {
 
   override def endpointUri = "file:/home/debasish/my-projects/reconciliation/recon/src/test/resources/australia/" + date + "?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
-  // override def endpointUri = "file:/Users/debasishghosh/projects/recon/src/test/resources/australia/" + date + "?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
 
   override def getSourceConfig(file: String): ReconSource[CustodianFetchValue] =
     if (file contains "DATA_CUSTODIAN_A") CustodianAConfig
@@ -43,7 +43,7 @@ class CustodianReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], c
 }
 
 @RunWith(classOf[JUnitRunner])
-class CustodianReconCamelSpec extends Spec 
+class CustodianReconCamelFutureSpec extends Spec 
                               with ShouldMatchers
                               with BeforeAndAfterEach
                               with BeforeAndAfterAll {
@@ -70,7 +70,7 @@ class CustodianReconCamelSpec extends Spec
       override val runDate = date
     }
     import engine._
-    actorOf(new CustodianReconConsumer(engine, (x: List[String]) => x.size == 3, dateString)).start 
+    actorOf(new CustodianReconCon(engine, (x: List[Future[_]]) => x.size == 3, dateString)).start 
   }
 
   describe("Custodian A B and C for 2010-10-24") {
@@ -79,7 +79,7 @@ class CustodianReconCamelSpec extends Spec
       CamelContextManager.init  // optionally takes a CamelContext as argument
       CamelContextManager.start // starts the managed CamelContext
 
-      println(System.currentTimeMillis)
+      println("start: " + System.currentTimeMillis)
       runReconFor(new DateTime("2010-10-24").toLocalDate, "20101024")
       runReconFor(new DateTime("2010-10-25").toLocalDate, "20101025")
       runReconFor(new DateTime("2010-10-26").toLocalDate, "20101026")

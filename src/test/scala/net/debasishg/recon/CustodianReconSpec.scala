@@ -62,10 +62,12 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
               persist
 
-      val m1 = Map() ++ res.get.flatten.flatten 
-      (m1 get Match) should equal(Some(Some(66)))
-      (m1 get Break) should equal(Some(Some(52)))
-      (m1 get Unmatch) should equal(Some(Some(8)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Double](client, clientName, runDate).map(_.size) should equal(Some(66))
+        fetchUnmatchEntries[Double](client, clientName, runDate).map(_.size) should equal(Some(8))
+        fetchBreakEntries[Double](client, clientName, runDate).map(_.size) should equal(Some(52))
+      }
     }
   }
 
@@ -92,10 +94,15 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
               persist
 
-      val m1 = Map() ++ res1.get.flatten.flatten 
-      (m1 get Match) should equal(Some(Some(66)))
-      (m1 get Break) should equal(Some(Some(52)))
-      (m1 get Unmatch) should equal(Some(Some(8)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Double](client, clientName, runDate)
+          .map(_.size) should equal(Some(66))
+        fetchUnmatchEntries[Double](client, clientName, runDate)
+          .map(_.size) should equal(Some(8))
+        fetchBreakEntries[Double](client, clientName, runDate)
+          .map(_.size) should equal(Some(52))
+      }
 
       val engine2 = new CustodianReconEngine {
         override val runDate = new DateTime("2010-10-25").toLocalDate
@@ -113,10 +120,15 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, engine2.reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
               engine2.persist
 
-      val m2 = Map() ++ res2.get.flatten.flatten 
-      (m2 get Match) should equal(Some(Some(69)))
-      (m2 get Break) should equal(Some(Some(52)))
-      (m2 get Unmatch) should equal(Some(Some(5)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Double](client, engine2.clientName, engine2.runDate)
+          .map(_.size) should equal(Some(69))
+        fetchUnmatchEntries[Double](client, engine2.clientName, engine2.runDate)
+          .map(_.size) should equal(Some(5))
+        fetchBreakEntries[Double](client, engine2.clientName, engine2.runDate)
+          .map(_.size) should equal(Some(52))
+      }
 
       engine2.consolidateWith(engine.runDate)
 
@@ -136,10 +148,15 @@ class CustodianReconSpec extends Spec
             (_.fold(_ => none, engine3.reconcile(_, matchHeadAsSumOfRest).seq.some))) map2 
               engine3.persist
 
-      val m3 = Map() ++ res3.get.flatten.flatten 
-      (m3 get Match) should equal(Some(Some(72)))
-      (m3 get Break) should equal(Some(Some(52)))
-      (m3 get Unmatch) should equal(Some(Some(2)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Double](client, engine3.clientName, engine3.runDate)
+          .map(_.size) should equal(Some(72))
+        fetchUnmatchEntries[Double](client, engine3.clientName, engine3.runDate)
+          .map(_.size) should equal(Some(2))
+        fetchBreakEntries[Double](client, engine3.clientName, engine3.runDate)
+          .map(_.size) should equal(Some(52))
+      }
 
       engine3.consolidateWith(engine2.runDate)
     }

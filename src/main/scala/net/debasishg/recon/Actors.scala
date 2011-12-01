@@ -76,11 +76,8 @@ object ReconActors {
       case Some(rdef) => loadingService[T, V](engine).tell(rdef, self)
       case id: String => 
         ids append id
-        println("received in Aggregator: " + id + " size = " + ids.toList.size + " pred = " + completionPred(ids.toList))
         if (completionPred(ids.toList)) {
-          println("completion done ..")
           val processor = actorOf(new Processor(engine)).start()
-          // processor.tell(ids.toList.sorted)
           processor.tell(ids.toList.sortWith(_ > _))
         }
     }
@@ -120,9 +117,7 @@ object ReconActors {
     self.dispatcher = reconDispatcher
     def receive = {
       case rdef: ReconDef[_] => 
-        println("in Loader .. processing " + rdef.values.size)
         self.reply(engine.loadOneReconSet(rdef.asInstanceOf[ReconDef[T]]))
-      case _ => sys.error("error")
     }
   }
   
@@ -137,12 +132,9 @@ object ReconActors {
     self.dispatcher = reconDispatcher
     def receive = {
       case ids: List[String] =>
-        println("in propcessor .. " + ids)
         val res = engine.reconcile(ids, matchHeadAsSumOfRest).seq
-        println("after reconcile ..")
         println(engine.persist(res))
         println(System.currentTimeMillis)
-      case _ => sys.error("error")
     }
   }
 }

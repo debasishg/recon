@@ -61,10 +61,14 @@ class TradeDataReconSpec extends Spec
         loadInput(defs)
           .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
-      res1.get.foreach {m =>
-        (m get Match) should equal(Some(Some(2)))
-        (m get Break) should equal(Some(Some(0)))
-        (m get Unmatch) should equal(Some(Some(1)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(2))
+        fetchUnmatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(1))
+        fetchBreakEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(0))
       }
     }
   }
@@ -89,10 +93,14 @@ class TradeDataReconSpec extends Spec
         loadInput(defs)
           .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
-      res1.get.foreach {m =>
-        (m get Match) should equal(Some(Some(1)))
-        (m get Break) should equal(Some(Some(0)))
-        (m get Unmatch) should equal(Some(Some(2)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(1))
+        fetchUnmatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(2))
+        fetchBreakEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(0))
       }
     }
   }
@@ -119,10 +127,14 @@ class TradeDataReconSpec extends Spec
         loadInput(defs)
           .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
-      res1.get.foreach {m =>
-        (m get Match) should equal(Some(Some(1)))
-        (m get Break) should equal(Some(Some(2)))
-        (m get Unmatch) should equal(Some(Some(2)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(1))
+        fetchUnmatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(2))
+        fetchBreakEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(2))
       }
     }
   }
@@ -156,10 +168,14 @@ class TradeDataReconSpec extends Spec
         loadInput(defs)
           .fold(_ => none, reconcile(_, match1on1).seq.some) map persist
 
-      res1.get.foreach {m =>
-        (m get Match) should equal(Some(Some(0)))
-        (m get Break) should equal(Some(Some(2)))
-        (m get Unmatch) should equal(Some(Some(3)))
+      import ReconUtils._
+      clients.withClient {client =>
+        fetchMatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(0))
+        fetchUnmatchEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(3))
+        fetchBreakEntries[Int](client, clientName, runDate)
+          .map(_.size) should equal(Some(2))
       }
     }
   }
