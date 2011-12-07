@@ -81,14 +81,14 @@ object ReconNActors {
               f: Format) extends Actor {
 
     self.dispatcher = reconDispatcher
-    val fs = ListBuffer.empty[ActorCompletableFuture]
+    val fs = ListBuffer.empty[Future[Any]]
     val pool = fileTransformationService(engine)
 
     override def receive = {
       case msg => 
         fs append (pool ? msg)
         if (completionPred(fs.toList)) {
-          self.reply(FileTransformed(fs.toList.map(_.get).asInstanceOf[List[Option[ReconDef[T]]]]))
+          self.reply(FileTransformed(Future.sequence(fs.toList).get.asInstanceOf[List[Option[ReconDef[T]]]]))
         }
     }
 
@@ -155,14 +155,14 @@ object ReconNActors {
               mv: Manifest[V]) extends Actor {
   
     self.dispatcher = reconDispatcher
-    val rdefs = ListBuffer.empty[ActorCompletableFuture]
+    val rdefs = ListBuffer.empty[Future[Any]]
     val pool = loadingService[T, V](engine)
 
     override def receive = {
       case rdef: ReconDef[_] => 
         rdefs append (pool ? rdef)
         if (completionPred(rdefs.toList)) 
-          self.reply(StoredInRepository(rdefs.toList.map(_.get).asInstanceOf[List[String]]))
+          self.reply(StoredInRepository(Future.sequence(rdefs.toList).get.asInstanceOf[List[String]]))
     }
 
     override def postStop() = {
