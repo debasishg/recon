@@ -24,6 +24,7 @@ import akka.camel.CamelServiceManager._
 import akka.actor.Actor._
 import akka.camel.CamelContextManager
 import akka.dispatch.Future
+import akka.event.EventHandler
 import ReconNActors._
 
 class CustodianReconCon(engine: ReconEngine[CustodianFetchValue, Double], completionPred: List[Future[_]] => Boolean, date: String)
@@ -79,7 +80,7 @@ class CustodianReconCamelFutureSpec extends Spec
       CamelContextManager.init  // optionally takes a CamelContext as argument
       CamelContextManager.start // starts the managed CamelContext
 
-      println("start: " + System.currentTimeMillis)
+      EventHandler.info(this, "start: " + System.currentTimeMillis)
       runReconFor(new DateTime("2010-10-24").toLocalDate, "20101024")
       runReconFor(new DateTime("2010-10-25").toLocalDate, "20101025")
       runReconFor(new DateTime("2010-10-26").toLocalDate, "20101026")

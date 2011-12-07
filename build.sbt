@@ -25,9 +25,10 @@ libraryDependencies <++= scalaVersion { scalaVersion =>
     "com.twitter"                    % "finagle-core"    % "1.9.0",
     "org.scala-tools.time"          %% "time"            % "0.5",
     "org.scalaz"                    %% "scalaz-core"     % "6.0.3",
-    "se.scalablesolutions.akka"      % "akka-actor"      % "1.3-RC1",
-    "se.scalablesolutions.akka"      % "akka-scalaz"     % "1.3-RC1",
-    "se.scalablesolutions.akka"      % "akka-camel"      % "1.3-RC1"
+    "se.scalablesolutions.akka"      % "akka-actor"      % "1.3-RC2",
+    "se.scalablesolutions.akka"      % "akka-scalaz"     % "1.3-RC2",
+    "se.scalablesolutions.akka"      % "akka-camel"      % "1.3-RC2",
+    "ch.qos.logback"                 % "logback-classic" % "0.9.28"                       % "runtime"
   )
 }
 

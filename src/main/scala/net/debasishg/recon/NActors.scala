@@ -18,6 +18,7 @@ import akka.dispatch.Dispatchers
 import akka.actor.Actor._
 import akka.dispatch.{Future, ActorCompletableFuture, DefaultCompletableFuture}
 import akka.scalaz.futures._
+import akka.event.EventHandler
 
 object ReconNActors {
 
@@ -124,8 +125,10 @@ object ReconNActors {
 
       case FileTransformed(rs) => 
         val rdefs = rs.asInstanceOf[List[Option[ReconDef[T]]]]
-        if (rdefs.size != rdefs.flatten.size) 
+        if (rdefs.size != rdefs.flatten.size) {
+          EventHandler.error(this, "error in file transformation")
           println("error in file transformation")
+        }
         else 
           rdefs.flatten.map {r: ReconDef[T] => loaderAggregator ! r}
 
@@ -135,13 +138,14 @@ object ReconNActors {
 
       case Persisted(s) => 
         clients.withClient {client => 
-          println(ReconUtils.fetchBreakEntries(client, engine.clientName, engine.runDate))
+          // println(ReconUtils.fetchBreakEntries(client, engine.clientName, engine.runDate))
+          EventHandler.info(this, ReconUtils.fetchBreakEntries(client, engine.clientName, engine.runDate))
         }
         fileXformerAggregator.stop()
         loaderAggregator.stop()
         processor.stop()
         persister.stop()
-        println(System.currentTimeMillis)
+        EventHandler.info(this, System.currentTimeMillis)
     }
   }
   
