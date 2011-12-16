@@ -31,19 +31,6 @@ object FileUtils {
       closeReader(_:BufferedReader),
       enumReader(_:BufferedReader, i)) 
 
-  /**
-  def enumReader[A](r: BufferedReader, it: IterV[String, A]): IO[IterV[String, A]] = {
-    def loop: IterV[String, A] => IO[IterV[String, A]] = {
-      case i@Done(_, _) => io(i)
-      case i@Cont(k) => for {
-        s <- io { r.readLine }
-        a <- if (s == null) io(i) else loop(k(El(s)))
-      } yield a
-    }
-    loop(it)
-  }
-  **/
-
   def enumReader[A](r: BufferedReader, it: IterV[String, A]): IO[IterV[String, A]] = { 
     def loop(x: IterV[String, A]): IterV[String, A] = x match { 
       case Done(_, _) => x 
@@ -54,7 +41,6 @@ object FileUtils {
     } 
     io { loop(it) } 
   } 
-
 
   val repeatHead = repeat[String, Option[String], List](head[String])
 }

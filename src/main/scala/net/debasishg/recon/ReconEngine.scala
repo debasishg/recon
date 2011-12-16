@@ -51,7 +51,6 @@ trait ReconEngine[T, V] {
 
   def fromSource1(fs: (String, ReconSource[T])): Option[ReconDef[T]] = {
     val (file, src) = fs
-    val start = System.currentTimeMillis
     import src._
     val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))
     a match {
@@ -177,14 +176,6 @@ trait ReconEngine[T, V] {
       }
     }
     res.size
-//    clients.withClient {client =>
-//      res map {_ =>
-//        Map[ReconRez, Option[Int]](
-//            Match -> (client.hgetall[String, MatchList[V]](matchHashKey).map(_.keySet.size)),
-//            Break -> (client.hgetall[String, MatchList[V]](breakHashKey).map(_.keySet.size)),
-//            Unmatch -> (client.hgetall[String, MatchList[V]](unmatchHashKey).map(_.keySet.size)))
-//      }
-//    }
   }
 
   def consolidateWith(pastDate: LocalDate) (implicit clients: RedisClientPool, m: Monoid[V], s: Semigroup[MatchList[V]], p: Parse[MatchList[V]], f: Format) = {

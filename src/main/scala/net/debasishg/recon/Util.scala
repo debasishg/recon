@@ -24,13 +24,5 @@ object Util {
     (implicit m: Format[MatchList[V]]) = tobinary(l)
 
   def deSerializeMatchList[V](bytes: Array[Byte]) 
-    (implicit m: Format[MatchList[V]]) = {
-    try {
-      frombinary[MatchList[V]](bytes)
-    } catch { 
-      case th: Throwable =>
-        println("***** from deserialize: " + new String(bytes, "UTF-8"))
-        sys.error(th.getMessage)
-    }
-  }
+    (implicit m: Format[MatchList[V]]) = frombinary[MatchList[V]](bytes)
 }
