@@ -14,21 +14,22 @@ libraryDependencies <++= scalaVersion { scalaVersion =>
   // The dependencies with proper scope
   Seq(
     "org.scala-lang.plugins"         % "continuations"   % scalaVersion,
-    "net.debasishg"                 %% "redisclient"     % "2.4.1",
+    "net.debasishg"                 %% "redisclient"     % "2.4.2",
     "net.debasishg"                 %% "sjson"           % "0.15",
     "org.slf4j"                      % "slf4j-api"       % "1.6.1",
-    "org.slf4j"                      % "slf4j-log4j12"   % "1.6.1"                        % "provided",
-    "log4j"                          % "log4j"           % "1.2.16"                       % "provided",
-    "junit"                          % "junit"           % "4.8.1"                        % "test",
+    "org.slf4j"                      % "slf4j-log4j12"   % "1.6.1"            % "provided",
+    "log4j"                          % "log4j"           % "1.2.16"           % "provided",
+    "junit"                          % "junit"           % "4.8.1"            % "test",
     "org.scalatest"                 %% "scalatest"       % scalatestVersion(scalaVersion) % "test",
     "com.twitter"                    % "util"            % "1.11.4",
     "com.twitter"                    % "finagle-core"    % "1.9.0",
     "org.scala-tools.time"          %% "time"            % "0.5",
     "org.scalaz"                    %% "scalaz-core"     % "6.0.3",
-    "se.scalablesolutions.akka"      % "akka-actor"      % "1.3-RC2",
-    "se.scalablesolutions.akka"      % "akka-scalaz"     % "1.3-RC2",
-    "se.scalablesolutions.akka"      % "akka-camel"      % "1.3-RC2",
-    "ch.qos.logback"                 % "logback-classic" % "0.9.28"                       % "runtime"
+    "se.scalablesolutions.akka"      % "akka-actor"      % "1.3-RC3",
+    "se.scalablesolutions.akka"      % "akka-scalaz"     % "1.3-RC3",
+    "se.scalablesolutions.akka"      % "akka-camel"      % "1.3-RC3",
+    "se.scalablesolutions.akka"      % "akka-testkit"    % "1.3-RC3"          % "test",
+    "ch.qos.logback"                 % "logback-classic" % "0.9.28"           % "runtime"
   )
 }
 
@@ -42,6 +43,8 @@ scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-Xcheckinit", "-P:c
 // scaladocOptions <++= (name, version) map { (name, ver) =>
 //  Seq("-doc-title", name, "-doc-version", ver)
 //}
+
+parallelExecution in Test := false
 
 publishTo := Some("Scala-Tools Nexus Repository for Releases" at "http://nexus.scala-tools.org/content/repositories/releases")
 

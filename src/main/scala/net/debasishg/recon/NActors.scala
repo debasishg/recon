@@ -71,7 +71,7 @@ object ReconNActors {
   }
 
   private[this] class FileTransformerAggregator[T, V](engine: ReconEngine[T, V], 
-    completionPred: List[Future[_]] => Boolean) 
+    totalNoOfFiles: Int) 
     (implicit clients: RedisClientPool, 
               parse: Parse[V], 
               m: Monoid[V], 
@@ -88,7 +88,7 @@ object ReconNActors {
     override def receive = {
       case msg => 
         fs append (pool ? msg)
-        if (completionPred(fs.toList)) {
+        if (fs.toList.size == totalNoOfFiles) {
           self.reply(FileTransformed(Future.sequence(fs.toList).get.asInstanceOf[List[Option[ReconDef[T]]]]))
         }
     }
@@ -98,7 +98,7 @@ object ReconNActors {
     }
   }
 
-  abstract class ReconConsumer[T, V](engine: ReconEngine[T, V], completionPred: List[Future[_]] => Boolean)
+  abstract class ReconConsumer[T, V](engine: ReconEngine[T, V], totalNoOfFiles: Int)
     (implicit clients: RedisClientPool, 
               p: Parse[MatchList[V]], 
               parse: Parse[V], 
@@ -111,13 +111,20 @@ object ReconNActors {
     def endpointUri: String
     self.dispatcher = reconDispatcher
 
-    val fileXformerAggregator = actorOf(new FileTransformerAggregator(engine, completionPred)).start()
-    val loaderAggregator = actorOf(new LoaderAggregator(engine, completionPred)).start()
-    val processor = actorOf(new Processor(engine)).start()
-    val persister = actorOf(new Persister(engine)).start()
+    val fileXformerAggregator = actorOf(new FileTransformerAggregator(engine, totalNoOfFiles))
+    val loaderAggregator = actorOf(new LoaderAggregator(engine, totalNoOfFiles))
+    val processor = actorOf(new Processor(engine))
+    val persister = actorOf(new Persister(engine))
   
     def getSourceConfig(file: String): ReconSource[T]
   
+    override def preStart = {
+      fileXformerAggregator.start()
+      loaderAggregator.start()
+      processor.start()
+      persister.start()
+    }
+
     override def receive = {
       case msg: Message => 
         val fileName = msg.getHeaderAs("CamelFilePath", classOf[String])
@@ -127,30 +134,28 @@ object ReconNActors {
         val rdefs = rs.asInstanceOf[List[Option[ReconDef[T]]]]
         if (rdefs.size != rdefs.flatten.size) {
           EventHandler.error(this, "error in file transformation")
-          println("error in file transformation")
         }
         else 
           rdefs.flatten.map {r: ReconDef[T] => loaderAggregator ! r}
 
       case StoredInRepository(ids) => processor ! ids 
 
-      case Reconciled(reconResults) => persister ! reconResults 
+      case Reconciled(reconResults) => 
+        persister ! reconResults 
 
       case Persisted(s) => 
-        clients.withClient {client => 
-          // println(ReconUtils.fetchBreakEntries(client, engine.clientName, engine.runDate))
-          EventHandler.info(this, ReconUtils.fetchBreakEntries(client, engine.clientName, engine.runDate))
-        }
-        fileXformerAggregator.stop()
-        loaderAggregator.stop()
-        processor.stop()
-        persister.stop()
         EventHandler.info(this, System.currentTimeMillis)
+    }
+
+    override def postStop = {
+      fileXformerAggregator.stop()
+      loaderAggregator.stop()
+      processor.stop()
+      persister.stop()
     }
   }
   
-  private[this] class LoaderAggregator[T, V](engine: ReconEngine[T, V], 
-    completionPred: List[Future[_]] => Boolean)
+  private[this] class LoaderAggregator[T, V](engine: ReconEngine[T, V], totalNoOfFiles: Int)
     (implicit clients: RedisClientPool, 
               format: Format, 
               parse: Parse[V], 
@@ -165,7 +170,7 @@ object ReconNActors {
     override def receive = {
       case rdef: ReconDef[_] => 
         rdefs append (pool ? rdef)
-        if (completionPred(rdefs.toList)) 
+        if (rdefs.toList.size == totalNoOfFiles) 
           self.reply(StoredInRepository(Future.sequence(rdefs.toList).get.asInstanceOf[List[String]]))
     }
 
