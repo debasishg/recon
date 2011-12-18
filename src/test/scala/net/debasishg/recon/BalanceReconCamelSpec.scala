@@ -25,13 +25,13 @@ import akka.actor.Actor._
 import akka.camel.CamelContextManager
 import ReconActors._
 
-class CReconConsumer(engine: ReconEngine[Balance, Int], completionPred: List[String] => Boolean)
+class CReconConsumer(engine: ReconEngine[Balance, Int], totalNoOfFiles: Int)
   (implicit clients: RedisClientPool, 
             parse: Parse[Int], 
             m: Monoid[Int], 
             r: ReconProtocol[Balance, Int], 
             p: Parse[MatchList[Int]], 
-            f: Format) extends ReconConsumer[Balance, Int](engine, completionPred) {
+            f: Format) extends ReconConsumer[Balance, Int](engine, totalNoOfFiles) {
 
   override def endpointUri = "file:/Users/debasishghosh/balance?noop=true&include=.*\\.csv&sortBy=file:name"
 
@@ -71,7 +71,7 @@ class BalanceReconCamelSpec extends Spec
     // val proc = actorOf(
       // new ReconProcessor[Balance, Int](engine, (x: List[String]) => x.size == 3)).start
     // val loader = actorOf(new ReconLoader[Balance, Int](engine, proc)).start
-    actorOf(new CReconConsumer(engine, (x: List[String]) => x.size == 3)).start // create Consumer actor
+    actorOf(new CReconConsumer(engine, 3)).start // create Consumer actor
   }
 
   describe("Custodian A B and C for 2010-10-24") {

@@ -49,7 +49,7 @@ trait ReconEngine[T, V] {
     if (ex != null) none else list.toSeq.some
   }
 
-  def fromSource1(fs: (String, ReconSource[T])): Option[ReconDef[T]] = {
+  def fromSource(fs: (String, ReconSource[T])): Option[ReconDef[T]] = {
     val (file, src) = fs
     import src._
     val a = process(file) :-> (x => CollectionDef(id + runDate.toString, x.flatten.flatten))

@@ -23,18 +23,21 @@ import akka.camel.{Message, Consumer}
 import akka.camel.CamelServiceManager._
 import akka.actor.Actor._
 import akka.camel.CamelContextManager
+import akka.dispatch.Future
+import akka.event.EventHandler
+
 import ReconActors._
 
-class CustodianReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], completionPred: List[String] => Boolean, date: String)
+class CustodianReconConsumer(engine: ReconEngine[CustodianFetchValue, Double], 
+  totalNoOfFiles: Int, date: String)
   (implicit clients: RedisClientPool, 
             parse: Parse[Double], 
             m: Monoid[Double], 
             r: ReconProtocol[CustodianFetchValue, Double], 
             p: Parse[MatchList[Double]], 
-            f: Format) extends ReconConsumer[CustodianFetchValue, Double](engine, completionPred) {
+            f: Format) extends ReconConsumer[CustodianFetchValue, Double](engine, totalNoOfFiles) {
 
-  override def endpointUri = "file:/home/debasish/my-projects/reconciliation/recon/src/test/resources/australia/" + date + "?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
-  // override def endpointUri = "file:/Users/debasishghosh/projects/recon/src/test/resources/australia/" + date + "?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
+  override def endpointUri = "file:/Users/debasishghosh/projects/recon/src/test/resources/australia/" + date + "?noop=true&include=.*\\.(txt|csv)&sortBy=reverse:file:name"
 
   override def getSourceConfig(file: String): ReconSource[CustodianFetchValue] =
     if (file contains "DATA_CUSTODIAN_A") CustodianAConfig
@@ -56,13 +59,13 @@ class CustodianReconCamelSpec extends Spec
   override def beforeEach = {
   }
 
-  // override def afterEach = clients.withClient{
-    // client => client.flushdb
-  // }
+  override def afterEach = clients.withClient{
+    client => client.flushdb
+  }
 
   override def afterAll = {
-    // clients.withClient {client => client.disconnect}
-    // clients.close
+    clients.withClient {client => client.disconnect}
+    clients.close
   }
 
   def runReconFor(date: LocalDate, dateString: String) = {
@@ -70,7 +73,7 @@ class CustodianReconCamelSpec extends Spec
       override val runDate = date
     }
     import engine._
-    actorOf(new CustodianReconConsumer(engine, (x: List[String]) => x.size == 3, dateString)).start 
+    actorOf(new CustodianReconConsumer(engine, 3, dateString)).start 
   }
 
   describe("Custodian A B and C for 2010-10-24") {
@@ -79,10 +82,29 @@ class CustodianReconCamelSpec extends Spec
       CamelContextManager.init  // optionally takes a CamelContext as argument
       CamelContextManager.start // starts the managed CamelContext
 
-      println(System.currentTimeMillis)
+      EventHandler.info(this, "start: " + System.currentTimeMillis)
+
       runReconFor(new DateTime("2010-10-24").toLocalDate, "20101024")
       runReconFor(new DateTime("2010-10-25").toLocalDate, "20101025")
       runReconFor(new DateTime("2010-10-26").toLocalDate, "20101026")
+
+      Thread.sleep(12000)
+
+      clients.withClient {client => 
+        EventHandler.info(this, "No of Breaks: " + ReconUtils.fetchBreakEntries[Double](client, "australia-bank", new DateTime("2010-10-24").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Matches: " + ReconUtils.fetchMatchEntries[Double](client, "australia-bank", new DateTime("2010-10-24").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Unmatches: " + ReconUtils.fetchUnmatchEntries[Double](client, "australia-bank", new DateTime("2010-10-24").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Breaks: " + ReconUtils.fetchBreakEntries[Double](client, "australia-bank", new DateTime("2010-10-25").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Matches: " + ReconUtils.fetchMatchEntries[Double](client, "australia-bank", new DateTime("2010-10-25").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Unmatches: " + ReconUtils.fetchUnmatchEntries[Double](client, "australia-bank", new DateTime("2010-10-25").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Breaks: " + ReconUtils.fetchBreakEntries[Double](client, "australia-bank", new DateTime("2010-10-26").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Matches: " + ReconUtils.fetchMatchEntries[Double](client, "australia-bank", new DateTime("2010-10-26").toLocalDate).get.keys.size)
+        EventHandler.info(this, "No of Unmatches: " + ReconUtils.fetchUnmatchEntries[Double](client, "australia-bank", new DateTime("2010-10-26").toLocalDate).get.keys.size)
+        EventHandler.shutdown()
+        Actor.registry.shutdownAll()
+        CamelContextManager.stop
+        stopCamelService
+      }
     }
   }
 }
